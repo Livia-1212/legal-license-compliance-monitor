@@ -1,0 +1,9 @@
+matter_id,matter_name,jurisdiction,client,revenue,matter_type,status
+M001,Commercial Lease Dispute,NY,ABC Corp,75000,Litigation,Active
+M002,Employment Litigation,CA,TechSoft,120000,Litigation,Active
+M003,Private Equity Acquisition,TX,Capital Group,300000,Transaction,Active
+M004,Real Estate Financing,IL,Urban Holdings,90000,Transaction,Active
+M005,Cross Border Supply Agreement,NJ,Global Trade Inc,180000,Transaction,Active
+M006,Data Privacy Investigation,MA,HealthData LLC,210000,Regulatory,Active
+M007,SaaS Vendor Contract Review,CA,CloudScale Inc,95000,Commercial,Active
+M008,Commercial Loan Restructuring,NY,Metro Bank,160000,Finance,Active

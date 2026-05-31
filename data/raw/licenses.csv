@@ -1,0 +1,10 @@
+attorney_id,jurisdiction,admission_date,license_status,registration_expiry
+1001,NY,2015-05-10,Active,2026-12-31
+1001,NJ,2018-04-01,Active,2026-12-31
+1002,NJ,2020-06-15,Expired,2025-12-31
+1003,IL,2010-09-20,Suspended,2026-12-31
+1004,CA,2012-08-10,Active,2026-06-30
+1005,TX,2021-02-01,Active,2026-09-30
+1006,NY,2022-01-15,Active,2026-12-31
+1007,CA,2016-03-22,Active,2026-06-30
+1008,MA,2014-11-05,Active,2026-08-31
