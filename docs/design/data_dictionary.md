@@ -6,6 +6,7 @@
 |---|---|
 | attorney_id | Unique attorney identifier |
 | name | Attorney full name |
+| email | Attorney work email address for compliance follow-up |
 | title | Attorney role or seniority level |
 | office | Primary office location |
 | practice_group | Attorney's primary practice group |
