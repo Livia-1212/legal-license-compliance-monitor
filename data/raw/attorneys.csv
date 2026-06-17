@@ -1,9 +1,9 @@
-attorney_id,name, email,title,office,practice_group,employment_status
-1001,John Smith,john.smith@firmexample.com,Partner,New York,Corporate,Active
-1002,Sarah Lee,sarah.lee@firmexample.com,Associate,New Jersey,Litigation,Active
-1003,David Chen,david.chen@firmexample.com,Counsel,Chicago,Real Estate,Active
-1004,Emily Johnson,emily.johnson@firmexample.com,Partner,Los Angeles,Employment,Active
-1005,Michael Brown,michael.brown@firmexample.com,Associate,Dallas,Finance,Active
-1006,Amanda Wilson,amanda.wilson@firmexample.com,Associate,New York,Litigation,Active
-1007,Kevin Zhang,kevin.zhang@firmexample.com,Partner,San Francisco,Technology Transactions,Active
-1008,Rachel Green,rachel.green@firmexample.com,Counsel,Boston,Regulatory,Active
+attorney_id,name,email,date_of_birth,title,office,practice_area,employment_status
+1001,John Smith,john.smith@firmexample.com,1983-06-15,Partner,New York,Corporate,Active
+1002,Sarah Lee,sarah.lee@firmexample.com,1990-03-20,Associate,New Jersey,Litigation,Active
+1003,David Chen,david.chen@firmexample.com,1978-11-08,Counsel,Chicago,Real Estate,Active
+1004,Emily Johnson,emily.johnson@firmexample.com,1981-05-30,Partner,Los Angeles,Employment,Active
+1005,Michael Brown,michael.brown@firmexample.com,1992-09-12,Associate,Dallas,Finance,Active
+1006,Amanda Wilson,amanda.wilson@firmexample.com,1994-01-25,Associate,New York,Litigation,Active
+1007,Kevin Zhang,kevin.zhang@firmexample.com,1980-07-04,Partner,San Francisco,Technology Transactions,Active
+1008,Rachel Green,rachel.green@firmexample.com,1986-10-18,Counsel,Boston,Regulatory,Active

@@ -7,7 +7,7 @@ SELECT
     a.email,
     a.title,
     a.office,
-    a.practice_group,
+    a.practice_area,
     c.jurisdiction,
     c.required_hours,
     c.completed_hours,

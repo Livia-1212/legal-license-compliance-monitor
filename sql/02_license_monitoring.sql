@@ -7,16 +7,16 @@ SELECT
     a.email,
     a.title,
     a.office,
-    a.practice_group,
+    a.practice_area,
     l.jurisdiction,
     l.license_status,
     l.registration_expiry,
     CASE
         WHEN l.license_status = 'Active' THEN 'Compliant'
-        WHEN l.license_status = 'Expired' THEN 'Registration Risk'
-        WHEN l.license_status = 'Suspended' THEN 'Critical License Risk'
+        WHEN l.license_status = 'Expired' THEN 'Registration Issue'
+        WHEN l.license_status = 'Suspended' THEN 'License Status Issue'
         ELSE 'Review Required'
-    END AS license_risk_category
+    END AS license_compliance_issue
 FROM attorneys a
 JOIN licenses l
     ON a.attorney_id = l.attorney_id
