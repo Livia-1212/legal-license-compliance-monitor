@@ -20,6 +20,7 @@ Primary key: `jurisdiction`
 
 ### matters
 Primary key: `matter_id`
+
 Foreign keys:
 - `matters.matter_id` → `matter_assignments.matter_id`
 - `attorneys.attorney_id` → `matter_assignments.attorney_id`
