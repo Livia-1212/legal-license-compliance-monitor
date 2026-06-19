@@ -1,4 +1,4 @@
-````markdown
+
 # Legal License Compliance Monitor
 
 ## Overview
@@ -24,7 +24,6 @@ This project provides a framework for detecting these risks and supporting compl
 
 ## Project Architecture
 
-```text
 Raw Data (CSV)
         ↓
 Data Quality Validation
@@ -36,7 +35,7 @@ Risk Scoring Engine
 Management Dashboard Metrics
         ↓
 Compliance Assistant
-````
+
 
 ---
 
@@ -265,5 +264,5 @@ legal-license-compliance-monitor
 ## License
 
 This project is provided for educational and portfolio purposes.
-```
-```
+
+
