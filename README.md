@@ -262,5 +262,8 @@ legal-license-compliance-monitor
 * M.S. Computer Science Candidate (NJIT)
 * Legal Technology, Compliance Analytics, and Risk Data Enthusiast
 
+## License
+
+This project is provided for educational and portfolio purposes.
 ```
 ```
