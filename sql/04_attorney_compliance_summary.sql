@@ -1,46 +1,48 @@
--- Module 4: Attorney Compliance Summary
--- Purpose: Create an attorney-level compliance risk summary by combining license status, CLE status, and matter assignment risk.
+-- Module 4: Attorney Compliance Findings Summary
+-- Purpose: Provide attorney-level compliance findings with clear issue descriptions for legal and compliance stakeholders.
 
-WITH license_risk AS (
+WITH license_findings AS (
     SELECT
         attorney_id,
-        MAX(
+        GROUP_CONCAT(
             CASE
-                WHEN license_status = 'Suspended' THEN 100
-                WHEN license_status = 'Expired' THEN 75
-                ELSE 0
+                WHEN license_status = 'Suspended'
+                    THEN CONCAT('Suspended ', jurisdiction, ' license')
+                WHEN license_status = 'Expired'
+                    THEN CONCAT('Expired ', jurisdiction, ' registration')
             END
-        ) AS license_risk_score
+            SEPARATOR '; '
+        ) AS license_issue
     FROM licenses
+    WHERE license_status <> 'Active'
     GROUP BY attorney_id
 ),
 
-cle_risk AS (
+cle_findings AS (
     SELECT
         attorney_id,
-        MAX(
-            CASE
-                WHEN completed_hours < required_hours THEN 25
-                ELSE 0
-            END
-        ) AS cle_risk_score,
-        SUM(
-            CASE
-                WHEN completed_hours < required_hours
-                THEN required_hours - completed_hours
-                ELSE 0
-            END
-        ) AS total_missing_cle_hours
+        GROUP_CONCAT(
+            CONCAT('Missing ', required_hours - completed_hours, ' CLE hours in ', jurisdiction)
+            SEPARATOR '; '
+        ) AS cle_issue,
+        SUM(required_hours - completed_hours) AS total_missing_cle_hours
     FROM cle_records
+    WHERE completed_hours < required_hours
     GROUP BY attorney_id
 ),
 
-matter_risk AS (
+matter_findings AS (
     SELECT
         ma.attorney_id,
-        COUNT(*) AS risky_matter_count,
-        SUM(m.revenue) AS revenue_at_risk,
-        MAX(100) AS matter_assignment_risk_score
+        GROUP_CONCAT(
+            CONCAT(
+                'Assigned to ', m.matter_name,
+                ' (', m.jurisdiction, ') for ', m.client
+            )
+            SEPARATOR '; '
+        ) AS matter_issue,
+        COUNT(*) AS affected_matter_count,
+        SUM(m.revenue) AS revenue_exposure
     FROM matter_assignments ma
     JOIN matters m
         ON ma.matter_id = m.matter_id
@@ -60,46 +62,42 @@ SELECT
     a.office,
     a.practice_group,
 
-    COALESCE(lr.license_risk_score, 0) AS license_risk_score,
-    COALESCE(cr.cle_risk_score, 0) AS cle_risk_score,
-    COALESCE(cr.total_missing_cle_hours, 0) AS total_missing_cle_hours,
-    COALESCE(mr.matter_assignment_risk_score, 0) AS matter_assignment_risk_score,
-    COALESCE(mr.risky_matter_count, 0) AS risky_matter_count,
-    COALESCE(mr.revenue_at_risk, 0) AS revenue_at_risk,
+    COALESCE(lf.license_issue, 'No license issue') AS license_findings,
+    COALESCE(cf.cle_issue, 'No CLE issue') AS cle_findings,
+    COALESCE(mf.matter_issue, 'No matter assignment issue') AS matter_assignment_findings,
 
-    (
-        COALESCE(lr.license_risk_score, 0)
-        + COALESCE(cr.cle_risk_score, 0)
-        + COALESCE(mr.matter_assignment_risk_score, 0)
-    ) AS total_compliance_risk_score,
+    COALESCE(cf.total_missing_cle_hours, 0) AS total_missing_cle_hours,
+    COALESCE(mf.affected_matter_count, 0) AS affected_matter_count,
+    COALESCE(mf.revenue_exposure, 0) AS revenue_exposure,
 
     CASE
-        WHEN (
-            COALESCE(lr.license_risk_score, 0)
-            + COALESCE(cr.cle_risk_score, 0)
-            + COALESCE(mr.matter_assignment_risk_score, 0)
-        ) >= 150 THEN 'Critical'
-        WHEN (
-            COALESCE(lr.license_risk_score, 0)
-            + COALESCE(cr.cle_risk_score, 0)
-            + COALESCE(mr.matter_assignment_risk_score, 0)
-        ) >= 75 THEN 'High'
-        WHEN (
-            COALESCE(lr.license_risk_score, 0)
-            + COALESCE(cr.cle_risk_score, 0)
-            + COALESCE(mr.matter_assignment_risk_score, 0)
-        ) > 0 THEN 'Moderate'
-        ELSE 'Low'
-    END AS overall_risk_level
+        WHEN lf.license_issue LIKE '%Suspended%'
+            OR mf.affected_matter_count > 0
+            THEN 'Critical'
+        WHEN lf.license_issue IS NOT NULL
+            OR cf.total_missing_cle_hours > 0
+            THEN 'High'
+        ELSE 'No Current Finding'
+    END AS overall_assessment
 
 FROM attorneys a
-LEFT JOIN license_risk lr
-    ON a.attorney_id = lr.attorney_id
-LEFT JOIN cle_risk cr
-    ON a.attorney_id = cr.attorney_id
-LEFT JOIN matter_risk mr
-    ON a.attorney_id = mr.attorney_id
+LEFT JOIN license_findings lf
+    ON a.attorney_id = lf.attorney_id
+LEFT JOIN cle_findings cf
+    ON a.attorney_id = cf.attorney_id
+LEFT JOIN matter_findings mf
+    ON a.attorney_id = mf.attorney_id
+
+WHERE
+    lf.license_issue IS NOT NULL
+    OR cf.cle_issue IS NOT NULL
+    OR mf.matter_issue IS NOT NULL
 
 ORDER BY
-    total_compliance_risk_score DESC,
-    revenue_at_risk DESC;
+    CASE
+        WHEN overall_assessment = 'Critical' THEN 1
+        WHEN overall_assessment = 'High' THEN 2
+        ELSE 3
+    END,
+    revenue_exposure DESC,
+    total_missing_cle_hours DESC;
