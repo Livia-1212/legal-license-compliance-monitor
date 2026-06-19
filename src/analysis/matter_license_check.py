@@ -1,4 +1,5 @@
-from load_data import load_all_data
+import pandas as pd
+from src.analysis.load_data import load_all_data
 
 
 def find_matter_license_risks():
@@ -19,7 +20,17 @@ def find_matter_license_risks():
     risky = merged[
         (merged["license_status"].isna()) |
         (merged["license_status"].isin(["Expired", "Suspended"]))
-    ]
+    ].copy()
+
+    risky["risk_reason"] = risky.apply(
+        lambda row: "Attorney not licensed in matter jurisdiction"
+        if pd.isna(row["license_status"])
+        else f"License status is {row['license_status']}",
+        axis=1
+    )
+
+    risky["license_status"] = risky["license_status"].fillna("Unlicensed")
+    risky["registration_expiry"] = risky["registration_expiry"].fillna("N/A")
 
     return risky[
         [
@@ -33,6 +44,7 @@ def find_matter_license_risks():
             "role",
             "license_status",
             "registration_expiry",
+            "risk_reason",
         ]
     ]
 

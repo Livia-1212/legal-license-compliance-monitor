@@ -1,4 +1,4 @@
-from load_data import load_all_data
+from src.analysis.load_data import load_all_data
 
 
 def calculate_attorney_risk_scores():

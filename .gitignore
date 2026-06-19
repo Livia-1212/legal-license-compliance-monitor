@@ -1,15 +1,16 @@
-# macOS
-.DS_Store
-
 # Python
 __pycache__/
 *.py[cod]
+.pytest_cache/
+
+# Virtual environment
 .venv/
 venv/
+env/
 
-# Jupyter
-.ipynb_checkpoints/
+# macOS
+.DS_Store
 
-# Outputs
-outputs/*.csv
-outputs/*.xlsx
+# IDE
+.vscode/
+.idea/

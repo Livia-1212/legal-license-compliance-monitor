@@ -2,10 +2,9 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-sys.path.append(str(ROOT / "src" / "analysis"))
 
-from load_data import load_all_data
-from risk_scoring import calculate_attorney_risk_scores
+from src.analysis.load_data import load_all_data
+from src.analysis.risk_scoring import calculate_attorney_risk_scores
 
 
 def generate_dashboard_summary():
