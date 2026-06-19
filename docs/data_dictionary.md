@@ -86,27 +86,26 @@ Primary Key:
 
 ## Table: matters
 
-Stores legal matter information.
+Stores matter-level information.
 
-Current MVP Limitation:
-
-* Dataset currently duplicates matter assignment information.
-* Future versions should contain matter-level metadata.
-
-Planned Fields:
-
-| Column       | Description                        |
-| ------------ | ---------------------------------- |
-| matter_id    | Unique matter identifier           |
-| matter_name  | Matter name                        |
-| client_name  | Client                             |
-| matter_type  | Litigation, Corporate, Real Estate |
-| jurisdiction | Matter jurisdiction                |
-| status       | Open or Closed                     |
+| Column | Data Type | Description |
+|---|---|---|
+| matter_id | String | Unique matter identifier |
+| matter_name | String | Name of the legal matter |
+| jurisdiction | String | Jurisdiction associated with the matter |
+| client | String | Client name |
+| revenue | Numeric | Matter revenue exposure |
+| matter_type | String | Litigation, Transaction, Regulatory, Commercial, Finance |
+| status | String | Matter status |
 
 Primary Key:
+- matter_id
 
-* matter_id
+Foreign Key:
+- jurisdiction → jurisdiction_rules.jurisdiction
+
+Relationships:
+- One matter can have many attorney assignments.
 
 ---
 
@@ -125,6 +124,10 @@ Foreign Keys:
 
 * matter_id → matters.matter_id
 * attorney_id → attorneys.attorney_id
+
+Relationships:
+- Many-to-one relationship with matters.
+- Many-to-one relationship with attorneys.
 
 Business Rule:
 

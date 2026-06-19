@@ -20,8 +20,10 @@ Primary key: `jurisdiction`
 
 ### matters
 Primary key: `matter_id`
-
-Current issue: `matters.csv` duplicates `matter_assignments.csv`. It should be redesigned to store matter-level information only.
+Foreign keys:
+- `matters.matter_id` → `matter_assignments.matter_id`
+- `attorneys.attorney_id` → `matter_assignments.attorney_id`
+- `jurisdiction_rules.jurisdiction` → `matters.jurisdiction`
 
 ### matter_assignments
 Foreign keys:

@@ -20,7 +20,7 @@ Data Storage Layer
 
 ↓
 
-Compliance Validation Layer
+Compliance (SQL) Validation Layer
 
 ↓
 
@@ -28,7 +28,7 @@ Risk Analysis Layer
 
 ↓
 
-Reporting Layer
+Reporting Layer (Compliance Dashboard Dataset)
 
 ---
 
