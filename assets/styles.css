@@ -1,0 +1,507 @@
+    /* -----------------------------
+       Main app background
+    ----------------------------- */
+    .stApp {
+        background-color: #F4F6F9;
+        color: #1F2937;
+    }
+
+    /* Main content spacing */
+    .block-container {
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+        padding-left: 2.5rem;
+        padding-right: 2.5rem;
+    }
+
+    /* -----------------------------
+       Sidebar base styling
+    ----------------------------- */
+    section[data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #0F172A 0%, #111827 100%);
+        border-right: 1px solid #1F2937;
+    }
+
+    section[data-testid="stSidebar"] * {
+        color: #E5E7EB !important;
+    }
+
+    /* Reduce default Streamlit sidebar spacing */
+    section[data-testid="stSidebar"] div[data-testid="stVerticalBlock"] {
+        gap: 0.5rem;
+    }
+
+    /* Sidebar header */
+    .sidebar-header {
+        margin-bottom: 1.25rem;
+    }
+
+    .sidebar-title {
+        font-size: 1.45rem;
+        font-weight: 800;
+        color: #F9FAFB;
+        line-height: 1.2;
+        margin-bottom: 0.75rem;
+        letter-spacing: -0.02em;
+    }
+
+    .sidebar-subtitle {
+        font-size: 0.95rem;
+        color: #9CA3AF !important;
+        line-height: 1.5;
+        margin-bottom: 0;
+    }
+
+    /* Remove empty radio label spacing */
+    section[data-testid="stSidebar"] .stRadio > label {
+        display: none !important;
+    }
+
+    /* Pull navigation buttons closer to header */
+    section[data-testid="stSidebar"] .stRadio {
+        margin-top: 0.25rem;
+    }
+
+    /* Hide the default radio circles */
+    section[data-testid="stSidebar"] div[role="radiogroup"] label > div:first-child {
+        display: none !important;
+    }
+
+    /* Navigation button style */
+    section[data-testid="stSidebar"] div[role="radiogroup"] label {
+        background-color: rgba(255, 255, 255, 0.045);
+        border: 1px solid rgba(255, 255, 255, 0.10);
+        border-radius: 14px;
+        padding: 16px 18px !important;
+        margin-bottom: 14px;
+        min-height: 56px;
+        display: flex !important;
+        align-items: center !important;
+        cursor: pointer;
+        transition: all 0.18s ease-in-out;
+    }
+
+    /* Navigation hover effect */
+    section[data-testid="stSidebar"] div[role="radiogroup"] label:hover {
+        background-color: rgba(201, 162, 39, 0.14);
+        border-color: rgba(201, 162, 39, 0.42);
+        transform: translateX(2px);
+    }
+
+    /* Navigation text */
+    section[data-testid="stSidebar"] div[role="radiogroup"] label p {
+        font-size: 1rem !important;
+        font-weight: 600 !important;
+        margin: 0 !important;
+    }
+
+    /* Selected navigation item */
+    section[data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked) {
+        background-color: rgba(201, 162, 39, 0.20);
+        border: 1px solid rgba(201, 162, 39, 0.75);
+        box-shadow: 0 0 0 1px rgba(201, 162, 39, 0.18);
+    }
+
+    /* Gold selected indicator */
+    section[data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked)::before {
+        content: "";
+        width: 4px;
+        height: 28px;
+        background-color: #C9A227;
+        border-radius: 999px;
+        margin-right: 12px;
+        flex-shrink: 0;
+    }
+
+    /* -----------------------------
+       Main title styling
+    ----------------------------- */
+    .app-title {
+        font-size: 2.6rem;
+        font-weight: 700;
+        color: #111827;
+        margin-bottom: 0.25rem;
+        letter-spacing: -0.02em;
+    }
+
+    .app-subtitle {
+        font-size: 1.0rem;
+        color: #6B7280;
+        margin-bottom: 1.75rem;
+    }
+
+    /* -----------------------------
+       Section headers
+    ----------------------------- */
+    .section-title {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #0F172A;
+        margin-top: 0.5rem;
+        margin-bottom: 1.0rem;
+        border-left: 6px solid #C9A227;
+        padding-left: 12px;
+    }
+
+    .subsection-title {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #1F2937;
+        margin-top: 1.25rem;
+        margin-bottom: 0.75rem;
+    }
+
+    /* -----------------------------
+       KPI cards
+    ----------------------------- */
+    .kpi-card {
+        background: white;
+        border: 1px solid #E5E7EB;
+        border-left: 6px solid #C9A227;
+        border-radius: 14px;
+        padding: 18px 18px 14px 18px;
+        box-shadow: 0 2px 10px rgba(15, 23, 42, 0.05);
+        min-height: 110px;
+    }
+
+    .kpi-label {
+        font-size: 0.9rem;
+        color: #6B7280;
+        margin-bottom: 0.45rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+    }
+
+    .kpi-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #111827;
+        line-height: 1.2;
+    }
+
+    /* -----------------------------
+        Default Streamlit button styling
+        Used for normal buttons like Sign In / Register
+    ----------------------------- */
+    div[data-testid="stButton"] > button {
+        background: white !important;
+        border: 1px solid #D1D5DB !important;
+        border-radius: 10px !important;
+        padding: 10px 18px !important;
+        min-height: 44px !important;
+        color: #111827 !important;
+        font-size: 0.95rem !important;
+        font-weight: 700 !important;
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08) !important;
+        transition: all 0.18s ease-in-out !important;
+    }
+
+    div[data-testid="stButton"] > button:hover {
+        border-color: #C9A227 !important;
+        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12) !important;
+        transform: translateY(-1px);
+    }
+
+    div[data-testid="stButton"] > button:active {
+        transform: translateY(0px);
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08) !important;
+    }
+
+    /* -----------------------------
+    Clickable KPI button cards
+    Only applies inside .kpi-button-wrapper
+    ----------------------------- */
+    .kpi-button-wrapper div[data-testid="stButton"] > button {
+        background: white !important;
+        border: 1px solid #E5E7EB !important;
+        border-left: 6px solid #C9A227 !important;
+        border-radius: 14px !important;
+        padding: 22px 18px !important;
+        box-shadow: 0 2px 10px rgba(15, 23, 42, 0.05) !important;
+        min-height: 120px !important;
+        text-align: left !important;
+        color: #111827 !important;
+        font-weight: 800 !important;
+        white-space: pre-line !important;
+        transition: all 0.18s ease-in-out !important;
+    }
+
+    .kpi-button-wrapper div[data-testid="stButton"] > button:hover {
+        border-left: 6px solid #A67C00 !important;
+        border-color: #C9A227 !important;
+        box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12) !important;
+        transform: translateY(-2px);
+    }
+
+    .kpi-button-wrapper div[data-testid="stButton"] > button:active {
+        transform: translateY(0px);
+    }
+
+    /* -----------------------------
+       Panel / table styling
+    ----------------------------- */
+    .panel-card {
+        background: white;
+        border: 1px solid #E5E7EB;
+        border-radius: 14px;
+        padding: 18px 18px 10px 18px;
+        box-shadow: 0 2px 10px rgba(15, 23, 42, 0.05);
+        margin-bottom: 1rem;
+    }
+
+    div[data-testid="stDataFrame"] {
+        border: 1px solid #E5E7EB;
+        border-radius: 12px;
+        overflow: hidden;
+        background: white;
+    }
+
+    div[data-testid="metric-container"] {
+        background-color: white;
+        border: 1px solid #E5E7EB;
+        padding: 12px;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(15, 23, 42, 0.05);
+    }
+
+    /* Optional divider if needed elsewhere */
+    .divider {
+        border: none;
+        border-top: 1px solid #E5E7EB;
+        margin-top: 0.5rem;
+        margin-bottom: 1.2rem;
+    }
+
+    /* -----------------------------
+       Tab styling (Sign In / Register)
+    ----------------------------- */
+    button[data-baseweb="tab"] {
+        background-color: transparent !important;
+        border: none !important;
+        border-bottom: 2px solid #E5E7EB !important;
+        color: #6B7280 !important;
+        padding: 12px 16px !important;
+        font-weight: 600 !important;
+        transition: all 0.18s ease-in-out !important;
+        margin-right: 8px !important;
+    }
+
+    button[data-baseweb="tab"][aria-selected="true"] {
+        border-bottom: 2px solid #C9A227 !important;
+        color: #111827 !important;
+        background-color: rgba(201, 162, 39, 0.06) !important;
+    }
+
+    button[data-baseweb="tab"]:hover {
+        color: #111827 !important;
+    }
+
+    /* Tab content container */
+    div[data-baseweb="tab-panel"] {
+        padding-top: 1.5rem !important;
+    }
+
+    /* -----------------------------
+       Form input styling
+    ----------------------------- */
+    input[type="text"],
+    input[type="password"],
+    input[type="email"] {
+        background-color: white !important;
+        border: 1px solid #D1D5DB !important;
+        border-radius: 8px !important;
+        padding: 10px 12px !important;
+        font-size: 0.95rem !important;
+        color: #111827 !important;
+        transition: all 0.18s ease-in-out !important;
+    }
+
+    input[type="text"]:focus,
+    input[type="password"]:focus,
+    input[type="email"]:focus {
+        border-color: #C9A227 !important;
+        box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.1) !important;
+        outline: none !important;
+    }
+
+    /* File uploader styling */
+    div[data-testid="stFileUploadDropzone"] {
+        border: 2px dashed #D1D5DB !important;
+        border-radius: 12px !important;
+        background-color: #FAFBFC !important;
+        padding: 24px !important;
+        transition: all 0.18s ease-in-out !important;
+    }
+
+    div[data-testid="stFileUploadDropzone"]:hover {
+        border-color: #C9A227 !important;
+        background-color: rgba(201, 162, 39, 0.04) !important;
+    }
+
+    /* Radio button styling for upload mode */
+    div[role="radiogroup"] label {
+        cursor: pointer !important;
+        transition: all 0.18s ease-in-out !important;
+    }
+
+    /* Alert message styling */
+    div[data-testid="stAlert"] {
+        border-radius: 12px !important;
+        padding: 16px !important;
+        border: 1px solid !important;
+    }
+
+    div[data-testid="stAlert"] > div:first-child {
+        font-weight: 600 !important;
+        font-size: 0.95rem !important;
+    }
+
+    /* Success message */
+    div[data-testid="stAlert"]:has-text("successful") {
+        background-color: #F0FDF4 !important;
+        border-color: #86EFAC !important;
+        color: #166534 !important;
+    }
+
+    /* Error message */
+    div[data-testid="stAlert"]:has-text("failed") {
+        background-color: #FEF2F2 !important;
+        border-color: #FECACA !important;
+        color: #991B1B !important;
+    }
+
+    /* Info message */
+    div[data-testid="stAlert"]:has-text("required") {
+        background-color: #F0F9FF !important;
+        border-color: #BAE6FD !important;
+        color: #0C4A6E !important;
+    }
+
+    /* Selectbox styling */
+    div[data-baseweb="select"] {
+        border-radius: 8px !important;
+    }
+
+    div[data-baseweb="select"] button {
+        border: 1px solid #D1D5DB !important;
+        border-radius: 8px !important;
+        background-color: white !important;
+        color: #111827 !important;
+    }
+
+    /* -----------------------------
+       Auth page: Sign In / Register button sizing (scoped)
+       Only affects buttons wrapped in `.auth-buttons` containers.
+    ----------------------------- */
+    .auth-buttons div[data-testid="stButton"] > button {
+        padding: 8px 14px !important;
+        min-height: 44px !important;
+        border-radius: 10px !important;
+        font-size: 1rem !important;
+        font-weight: 700 !important;
+    }
+
+    /* Sidebar: target the very first button (top Sign In) to make it compact and aligned
+       This assumes the sidebar Sign In is rendered before the header markup.
+    */
+    section[data-testid="stSidebar"] > div:first-child div[data-testid="stButton"] > button {
+        padding: 8px 12px !important;
+        min-height: 44px !important;
+        margin-left: 12px !important;
+        margin-top: 8px !important;
+        border-radius: 10px !important;
+        background: transparent !important;
+        border: 1px solid rgba(255,255,255,0.06) !important;
+        color: #E5E7EB !important;
+    }
+
+    /* Multiselect styling */
+    div[data-baseweb="multi-select"] {
+        border-radius: 8px !important;
+    }
+
+    /* Download button styling (CSV export) */
+    a[href*=".csv"] button {
+        background-color: white !important;
+        border: 2px solid #C9A227 !important;
+        color: #C9A227 !important;
+        border-radius: 8px !important;
+        padding: 10px 16px !important;
+        font-weight: 600 !important;
+        transition: all 0.18s ease-in-out !important;
+    }
+
+    a[href*=".csv"] button:hover {
+        background-color: #C9A227 !important;
+        color: white !important;
+    }
+
+    /* Auth status message styling */
+    .auth-status {
+        background: linear-gradient(135deg, rgba(201, 162, 39, 0.1) 0%, rgba(201, 162, 39, 0.05) 100%);
+        border: 1px solid rgba(201, 162, 39, 0.3);
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 1.5rem;
+        color: #1F2937;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    /* Tableau dashboard container */
+    .tableau-container {
+        background: white;
+        border: 1px solid #E5E7EB;
+        border-radius: 14px;
+        padding: 0;
+        overflow: hidden;
+        box-shadow: 0 2px 10px rgba(15, 23, 42, 0.05);
+        margin-top: 1.5rem;
+    }
+
+    iframe {
+        border: none !important;
+        border-radius: 12px !important;
+    }
+
+    /* Upload/Download section styling */
+    .data-management-section {
+        background: white;
+        border: 1px solid #E5E7EB;
+        border-radius: 14px;
+        padding: 20px;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 10px rgba(15, 23, 42, 0.05);
+    }
+
+    /* Admin-only sections styling */
+    .admin-section {
+        background: linear-gradient(135deg, rgba(201, 162, 39, 0.08) 0%, rgba(201, 162, 39, 0.04) 100%);
+        border: 1px solid rgba(201, 162, 39, 0.2);
+        border-radius: 12px;
+        padding: 18px;
+        margin-top: 1.5rem;
+    }
+
+    .admin-section .subsection-title {
+        color: #92400E;
+        margin-top: 0;
+    }
+
+    /* Audit log and user list table styling */
+    div[data-testid="stDataFrame"] tr:hover {
+        background-color: rgba(201, 162, 39, 0.05) !important;
+    }
+
+    div[data-testid="stDataFrame"] thead {
+        background-color: rgba(201, 162, 39, 0.1) !important;
+    }
+
+    div[data-testid="stDataFrame"] th {
+        background-color: rgba(201, 162, 39, 0.1) !important;
+        color: #111827 !important;
+        font-weight: 700 !important;
+    }

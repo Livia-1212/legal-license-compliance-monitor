@@ -1,10 +1,17 @@
 import streamlit as st
 import pandas as pd
+import os
 
 from src.dashboard.dashboard_summary import generate_dashboard_summary
 from src.analysis.risk_scoring import calculate_attorney_risk_scores
 from src.analysis.matter_license_check import find_matter_license_risks
 from src.analysis.load_data import load_all_data
+from src.persistence import EXPECTED_COLUMNS, save_uploaded_csv, BACKUP_DIR
+from src.auth import init_user_store, authenticate, create_user, list_users
+import streamlit.components.v1 as components
+
+
+from src.ui.styles import load_css
 
 
 st.set_page_config(
@@ -13,263 +20,7 @@ st.set_page_config(
     layout="wide",
 )
 
-
-# -----------------------------
-# Custom CSS Styling
-# -----------------------------
-st.markdown(
-    """
-    <style>
-    /* -----------------------------
-       Main app background
-    ----------------------------- */
-    .stApp {
-        background-color: #F4F6F9;
-        color: #1F2937;
-    }
-
-    /* Main content spacing */
-    .block-container {
-        padding-top: 2rem;
-        padding-bottom: 2rem;
-        padding-left: 2.5rem;
-        padding-right: 2.5rem;
-    }
-
-    /* -----------------------------
-       Sidebar base styling
-    ----------------------------- */
-    section[data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #0F172A 0%, #111827 100%);
-        border-right: 1px solid #1F2937;
-    }
-
-    section[data-testid="stSidebar"] * {
-        color: #E5E7EB !important;
-    }
-
-    /* Reduce default Streamlit sidebar spacing */
-    section[data-testid="stSidebar"] div[data-testid="stVerticalBlock"] {
-        gap: 0.5rem;
-    }
-
-    /* Sidebar header */
-    .sidebar-header {
-        margin-bottom: 1.25rem;
-    }
-
-    .sidebar-title {
-        font-size: 1.45rem;
-        font-weight: 800;
-        color: #F9FAFB;
-        line-height: 1.2;
-        margin-bottom: 0.75rem;
-        letter-spacing: -0.02em;
-    }
-
-    .sidebar-subtitle {
-        font-size: 0.95rem;
-        color: #9CA3AF !important;
-        line-height: 1.5;
-        margin-bottom: 0;
-    }
-
-    /* Remove empty radio label spacing */
-    section[data-testid="stSidebar"] .stRadio > label {
-        display: none !important;
-    }
-
-    /* Pull navigation buttons closer to header */
-    section[data-testid="stSidebar"] .stRadio {
-        margin-top: 0.25rem;
-    }
-
-    /* Hide the default radio circles */
-    section[data-testid="stSidebar"] div[role="radiogroup"] label > div:first-child {
-        display: none !important;
-    }
-
-    /* Navigation button style */
-    section[data-testid="stSidebar"] div[role="radiogroup"] label {
-        background-color: rgba(255, 255, 255, 0.045);
-        border: 1px solid rgba(255, 255, 255, 0.10);
-        border-radius: 14px;
-        padding: 16px 18px !important;
-        margin-bottom: 14px;
-        min-height: 56px;
-        display: flex !important;
-        align-items: center !important;
-        cursor: pointer;
-        transition: all 0.18s ease-in-out;
-    }
-
-    /* Navigation hover effect */
-    section[data-testid="stSidebar"] div[role="radiogroup"] label:hover {
-        background-color: rgba(201, 162, 39, 0.14);
-        border-color: rgba(201, 162, 39, 0.42);
-        transform: translateX(2px);
-    }
-
-    /* Navigation text */
-    section[data-testid="stSidebar"] div[role="radiogroup"] label p {
-        font-size: 1rem !important;
-        font-weight: 600 !important;
-        margin: 0 !important;
-    }
-
-    /* Selected navigation item */
-    section[data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked) {
-        background-color: rgba(201, 162, 39, 0.20);
-        border: 1px solid rgba(201, 162, 39, 0.75);
-        box-shadow: 0 0 0 1px rgba(201, 162, 39, 0.18);
-    }
-
-    /* Gold selected indicator */
-    section[data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked)::before {
-        content: "";
-        width: 4px;
-        height: 28px;
-        background-color: #C9A227;
-        border-radius: 999px;
-        margin-right: 12px;
-        flex-shrink: 0;
-    }
-
-    /* -----------------------------
-       Main title styling
-    ----------------------------- */
-    .app-title {
-        font-size: 2.6rem;
-        font-weight: 700;
-        color: #111827;
-        margin-bottom: 0.25rem;
-        letter-spacing: -0.02em;
-    }
-
-    .app-subtitle {
-        font-size: 1.0rem;
-        color: #6B7280;
-        margin-bottom: 1.75rem;
-    }
-
-    /* -----------------------------
-       Section headers
-    ----------------------------- */
-    .section-title {
-        font-size: 2rem;
-        font-weight: 700;
-        color: #0F172A;
-        margin-top: 0.5rem;
-        margin-bottom: 1.0rem;
-        border-left: 6px solid #C9A227;
-        padding-left: 12px;
-    }
-
-    .subsection-title {
-        font-size: 1.2rem;
-        font-weight: 700;
-        color: #1F2937;
-        margin-top: 1.25rem;
-        margin-bottom: 0.75rem;
-    }
-
-    /* -----------------------------
-       KPI cards
-    ----------------------------- */
-    .kpi-card {
-        background: white;
-        border: 1px solid #E5E7EB;
-        border-left: 6px solid #C9A227;
-        border-radius: 14px;
-        padding: 18px 18px 14px 18px;
-        box-shadow: 0 2px 10px rgba(15, 23, 42, 0.05);
-        min-height: 110px;
-    }
-
-    .kpi-label {
-        font-size: 0.9rem;
-        color: #6B7280;
-        margin-bottom: 0.45rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.03em;
-    }
-
-    .kpi-value {
-        font-size: 2rem;
-        font-weight: 700;
-        color: #111827;
-        line-height: 1.2;
-    }
-
-    /* -----------------------------
-    Clickable KPI button cards
-    ----------------------------- */
-    div[data-testid="stButton"] > button {
-        background: white;
-        border: 1px solid #E5E7EB;
-        border-left: 6px solid #C9A227;
-        border-radius: 14px;
-        padding: 22px 18px;
-        box-shadow: 0 2px 10px rgba(15, 23, 42, 0.05);
-        min-height: 120px;
-        text-align: left;
-        color: #111827;
-        font-weight: 800;
-        white-space: pre-line;
-        transition: all 0.18s ease-in-out;
-    }
-
-    div[data-testid="stButton"] > button:hover {
-        border-left: 6px solid #A67C00;
-        border-color: #C9A227;
-        box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
-        transform: translateY(-2px);
-    }
-
-    div[data-testid="stButton"] > button:active {
-        transform: translateY(0px);
-    }
-
-    /* -----------------------------
-       Panel / table styling
-    ----------------------------- */
-    .panel-card {
-        background: white;
-        border: 1px solid #E5E7EB;
-        border-radius: 14px;
-        padding: 18px 18px 10px 18px;
-        box-shadow: 0 2px 10px rgba(15, 23, 42, 0.05);
-        margin-bottom: 1rem;
-    }
-
-    div[data-testid="stDataFrame"] {
-        border: 1px solid #E5E7EB;
-        border-radius: 12px;
-        overflow: hidden;
-        background: white;
-    }
-
-    div[data-testid="metric-container"] {
-        background-color: white;
-        border: 1px solid #E5E7EB;
-        padding: 12px;
-        border-radius: 12px;
-        box-shadow: 0 2px 10px rgba(15, 23, 42, 0.05);
-    }
-
-    /* Optional divider if needed elsewhere */
-    .divider {
-        border: none;
-        border-top: 1px solid #E5E7EB;
-        margin-top: 0.5rem;
-        margin-bottom: 1.2rem;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
-
+load_css()
 
 # -----------------------------
 # Cached Data Loaders
@@ -336,13 +87,16 @@ def go_to_page(page_name):
 
 
 def render_clickable_kpi_card(label, value, target_page, key):
-    st.button(
+    st.markdown('<div class="kpi-button-wrapper">', unsafe_allow_html=True)
+
+    if st.button(
         f"{label}\n\n{value}",
         key=key,
         use_container_width=True,
-        on_click=go_to_page,
-        args=(target_page,),
-    )
+    ):
+        go_to_page(target_page)
+
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 def render_attorney_filters(attorney_df):
@@ -354,21 +108,21 @@ def render_attorney_filters(attorney_df):
         office_filter = st.multiselect(
             "Office",
             options=sorted(attorney_df["office"].dropna().unique()),
-            default=sorted(attorney_df["office"].dropna().unique()),
+            default=[],
         )
 
     with c2:
         title_filter = st.multiselect(
             "Title",
             options=sorted(attorney_df["title"].dropna().unique()),
-            default=sorted(attorney_df["title"].dropna().unique()),
+            default=[],
         )
 
     with c3:
         practice_filter = st.multiselect(
             "Practice Area",
             options=sorted(attorney_df["practice_area"].dropna().unique()),
-            default=sorted(attorney_df["practice_area"].dropna().unique()),
+            default=[],
         )
 
     with c4:
@@ -379,11 +133,14 @@ def render_attorney_filters(attorney_df):
 
     filtered_df = attorney_df.copy()
 
-    filtered_df = filtered_df[
-        filtered_df["office"].isin(office_filter)
-        & filtered_df["title"].isin(title_filter)
-        & filtered_df["practice_area"].isin(practice_filter)
-    ]
+    if office_filter:
+        filtered_df = filtered_df[filtered_df["office"].isin(office_filter)]
+
+    if title_filter:
+        filtered_df = filtered_df[filtered_df["title"].isin(title_filter)]
+
+    if practice_filter:
+        filtered_df = filtered_df[filtered_df["practice_area"].isin(practice_filter)]
 
     if attorney_search:
         search_value = attorney_search.lower()
@@ -394,9 +151,249 @@ def render_attorney_filters(attorney_df):
 
     return filtered_df
 
+
+def render_auth_ui():
+    """Render the sign-in / register and data management UI."""
+    # User authentication + upload / download
+    init_user_store()
+
+    if "current_user" not in st.session_state:
+        st.session_state["current_user"] = None
+
+    def _sign_out():
+        st.session_state["current_user"] = None
+
+    if st.session_state["current_user"] is None:
+        # Use side-by-side columns so both forms are visible
+        col_sign, col_reg = st.columns(2)
+
+        with col_sign:
+            subsection_title("Sign In")
+            u_name = st.text_input("Username", key="signin_user")
+            u_pw = st.text_input("Password", type="password", key="signin_pw")
+            st.markdown('<div class="auth-buttons">', unsafe_allow_html=True)
+            if st.button("Sign In", key="sign_in_btn"):
+                user = authenticate(u_name, u_pw)
+                if user:
+                    st.session_state["current_user"] = user
+                    st.success(f"Signed in as {user['username']} ({user['role']})")
+                else:
+                    st.error("Invalid credentials")
+            st.markdown('</div>', unsafe_allow_html=True)
+
+        with col_reg:
+            subsection_title("Register")
+            new_user = st.text_input("New username", key="reg_user")
+            new_pw = st.text_input("New password", type="password", key="reg_pw")
+            new_pw_confirm = st.text_input("Confirm password", type="password", key="reg_pw2")
+            st.markdown('<div class="auth-buttons">', unsafe_allow_html=True)
+            if st.button("Register", key="register_btn"):
+                if not new_user or not new_pw:
+                    st.error("Provide username and password")
+                elif new_pw != new_pw_confirm:
+                    st.error("Passwords do not match")
+                else:
+                    success, msg = create_user(new_user, new_pw, role="user")
+                    if success:
+                        st.success(msg)
+                    else:
+                        st.error(msg)
+            st.markdown('</div>', unsafe_allow_html=True)
+
+        
+
+    else:
+        user = st.session_state["current_user"]
+        st.success(f"Signed in as {user['username']} ({user['role']})")
+        if st.button("Sign out"):
+            _sign_out()
+
+        # Upload / Download available to signed-in users (both user and admin roles)
+        subsection_title("Upload CSV Data")
+        st.write("Upload a dataset CSV to replace or append to the existing data file.")
+
+        dataset = st.selectbox("Dataset to upload", options=list(EXPECTED_COLUMNS.keys()))
+        upload_file = st.file_uploader("Choose CSV file", type=["csv"]) 
+        upload_mode = st.radio("Upload mode", options=["replace", "append"], index=0)
+
+        if upload_file is not None:
+            try:
+                preview_cols = pd.read_csv(upload_file, nrows=0).columns.tolist()
+            except Exception:
+                preview_cols = []
+            st.markdown(f"**Detected columns:** {', '.join(preview_cols) if preview_cols else 'Could not read columns.'}")
+
+            if st.button("Process upload"):
+                upload_file.seek(0)
+                uploader_name = user.get("username")
+                success, message = save_uploaded_csv(upload_file, dataset, mode=upload_mode, uploader=uploader_name)
+                if success:
+                    try:
+                        get_data.clear()
+                    except Exception:
+                        pass
+
+                    data = get_data()
+                    # refresh globals
+                    globals()["attorneys"] = data["attorneys"]
+                    globals()["licenses"] = data["licenses"]
+                    globals()["cle_records"] = data["cle_records"]
+                    globals()["matters"] = data["matters"]
+                    globals()["assignments"] = data["matter_assignments"]
+
+                    st.success(f"Upload successful: {message}")
+                else:
+                    st.error(f"Upload failed: {message}")
+
+        subsection_title("Download CSV Exports")
+        st.write("Download current datasets as CSV files.")
+
+        datasets = {
+            "attorneys": attorneys,
+            "licenses": licenses,
+            "cle_records": cle_records,
+            "matters": matters,
+            "matter_assignments": assignments,
+        }
+
+        for name, df in datasets.items():
+            try:
+                csv_bytes = df.to_csv(index=False).encode("utf-8")
+                st.download_button(
+                    label=f"Download {name}.csv",
+                    data=csv_bytes,
+                    file_name=f"{name}.csv",
+                    mime="text/csv",
+                )
+            except Exception as e:
+                st.warning(f"Unable to prepare download for {name}: {e}")
+
+        # Admin-only extra tools
+        if user.get("role") == "admin":
+            subsection_title("Admin: Audit Log")
+            try:
+                if (BACKUP_DIR / "upload_audit.csv").exists():
+                    audit_df = pd.read_csv(BACKUP_DIR / "upload_audit.csv")
+                    st.dataframe(audit_df, use_container_width=True)
+                    st.download_button(
+                        label="Download Audit Log",
+                        data=audit_df.to_csv(index=False).encode("utf-8"),
+                        file_name="upload_audit.csv",
+                        mime="text/csv",
+                    )
+                else:
+                    st.info("No audit log found yet.")
+            except Exception as e:
+                st.warning(f"Unable to load audit log: {e}")
+
+            subsection_title("Admin: User List")
+            try:
+                users = list_users()
+                st.dataframe(pd.DataFrame(users), use_container_width=True)
+            except Exception as e:
+                st.warning(f"Unable to list users: {e}")
+
+
+def render_data_management_ui():
+    """Render upload/download and admin tools for signed-in users."""
+    user = st.session_state.get("current_user")
+    if not user:
+        st.info("Please sign in using the 'Sign In' button in the sidebar.")
+        return
+
+    st.success(f"Signed in as {user['username']} ({user['role']})")
+    if st.button("Sign out", key="dm_signout"):
+        st.session_state["current_user"] = None
+
+    subsection_title("Upload CSV Data")
+    st.write("Upload a dataset CSV to replace or append to the existing data file.")
+
+    dataset = st.selectbox("Dataset to upload", options=list(EXPECTED_COLUMNS.keys()), key="dm_dataset")
+    upload_file = st.file_uploader("Choose CSV file", type=["csv"], key="dm_uploader")
+    upload_mode = st.radio("Upload mode", options=["replace", "append"], index=0, key="dm_mode")
+
+    if upload_file is not None:
+        try:
+            preview_cols = pd.read_csv(upload_file, nrows=0).columns.tolist()
+        except Exception:
+            preview_cols = []
+        st.markdown(f"**Detected columns:** {', '.join(preview_cols) if preview_cols else 'Could not read columns.'}")
+
+        if st.button("Process upload", key="dm_process_upload"):
+            upload_file.seek(0)
+            uploader_name = user.get("username")
+            success, message = save_uploaded_csv(upload_file, dataset, mode=upload_mode, uploader=uploader_name)
+            if success:
+                try:
+                    get_data.clear()
+                except Exception:
+                    pass
+
+                data = get_data()
+                globals()["attorneys"] = data["attorneys"]
+                globals()["licenses"] = data["licenses"]
+                globals()["cle_records"] = data["cle_records"]
+                globals()["matters"] = data["matters"]
+                globals()["assignments"] = data["matter_assignments"]
+
+                st.success(f"Upload successful: {message}")
+            else:
+                st.error(f"Upload failed: {message}")
+
+    subsection_title("Download CSV Exports")
+    st.write("Download current datasets as CSV files.")
+
+    datasets = {
+        "attorneys": attorneys,
+        "licenses": licenses,
+        "cle_records": cle_records,
+        "matters": matters,
+        "matter_assignments": assignments,
+    }
+
+    for name, df in datasets.items():
+        try:
+            csv_bytes = df.to_csv(index=False).encode("utf-8")
+            st.download_button(
+                label=f"Download {name}.csv",
+                data=csv_bytes,
+                file_name=f"{name}.csv",
+                mime="text/csv",
+            )
+        except Exception as e:
+            st.warning(f"Unable to prepare download for {name}: {e}")
+
+    if user.get("role") == "admin":
+        subsection_title("Admin: Audit Log")
+        try:
+            if (BACKUP_DIR / "upload_audit.csv").exists():
+                audit_df = pd.read_csv(BACKUP_DIR / "upload_audit.csv")
+                st.dataframe(audit_df, use_container_width=True)
+                st.download_button(
+                    label="Download Audit Log",
+                    data=audit_df.to_csv(index=False).encode("utf-8"),
+                    file_name="upload_audit.csv",
+                    mime="text/csv",
+                )
+            else:
+                st.info("No audit log found yet.")
+        except Exception as e:
+            st.warning(f"Unable to load audit log: {e}")
+
+        subsection_title("Admin: User List")
+        try:
+            users = list_users()
+            st.dataframe(pd.DataFrame(users), use_container_width=True)
+        except Exception as e:
+            st.warning(f"Unable to list users: {e}")
+
 # -----------------------------
 # Sidebar Navigation
 # -----------------------------
+# Sign-in shortcut above the header
+if st.sidebar.button("Sign In", key="sidebar_signin_btn"):
+    go_to_page("AuthChoice")
+
 st.sidebar.markdown(
     """
     <div class="sidebar-header">
@@ -411,6 +408,7 @@ sidebar_pages = [
     "Executive Summary",
     "Attorney Directory",
     "Matters Directory",
+    "Tableau Dashboard",
     "CLE Compliance",
     "Platform Help",
 ]
@@ -418,6 +416,9 @@ sidebar_pages = [
 hidden_pages = [
     "Revenue Exposure",
     "License Exceptions",
+    "AuthChoice",
+    "AuthSignIn",
+    "AuthRegister",
 ]
 
 all_pages = sidebar_pages + hidden_pages
@@ -602,14 +603,14 @@ elif page == "Matters Directory":
         jurisdiction_filter = st.multiselect(
             "Jurisdiction",
             options=sorted(matter_view["jurisdiction"].dropna().unique()),
-            default=sorted(matter_view["jurisdiction"].dropna().unique()),
+            default=[],
         )
 
     with f2:
         matter_type_filter = st.multiselect(
             "Matter Type",
             options=sorted(matter_view["matter_type"].dropna().unique()),
-            default=sorted(matter_view["matter_type"].dropna().unique()),
+            default=[],
         )
 
     with f3:
@@ -618,10 +619,11 @@ elif page == "Matters Directory":
             placeholder="Search by matter ID, client, type, or jurisdiction...",
         )
 
-    filtered_matters = matter_view[
-        matter_view["jurisdiction"].isin(jurisdiction_filter)
-        & matter_view["matter_type"].isin(matter_type_filter)
-    ]
+    filtered_matters = matter_view.copy()
+    if jurisdiction_filter:
+        filtered_matters = filtered_matters[filtered_matters["jurisdiction"].isin(jurisdiction_filter)]
+    if matter_type_filter:
+        filtered_matters = filtered_matters[filtered_matters["matter_type"].isin(matter_type_filter)]
 
     if matter_search:
         search_value = matter_search.lower()
@@ -715,11 +717,76 @@ elif page == "Matter License Risks":
 
 
 # -----------------------------
+# Tableau Dashboard
+# -----------------------------
+elif page == "Tableau Dashboard":
+    section_title("Tableau Dashboard")
+
+    st.write("Embedded Tableau dashboard (configure TABLEAU_DASHBOARD_URL env var to embed).")
+
+    tableau_url = os.environ.get("TABLEAU_DASHBOARD_URL", "") if 'os' in globals() else os.environ.get("TABLEAU_DASHBOARD_URL", "")
+    if tableau_url:
+        try:
+            components.iframe(tableau_url, height=800)
+        except Exception as e:
+            st.warning(f"Unable to embed Tableau dashboard: {e}")
+            st.markdown(f"[Open Tableau Dashboard]({tableau_url})")
+    else:
+        st.info("No Tableau dashboard URL configured. Set TABLEAU_DASHBOARD_URL environment variable.")
+        st.markdown("To embed a Tableau dashboard, set `TABLEAU_DASHBOARD_URL` environment variable to the share URL.")
+
+
+# -----------------------------
+# Auth flow pages (hidden)
+# -----------------------------
+elif page == "AuthChoice":
+    section_title("Sign In")
+    st.write("Choose an option to continue.")
+    c1, c2 = st.columns(2)
+    with c1:
+        if st.button("Sign In"):
+            go_to_page("AuthSignIn")
+    with c2:
+        if st.button("Register"):
+            go_to_page("AuthRegister")
+
+elif page == "AuthSignIn":
+    section_title("Sign In")
+    u_name = st.text_input("Username", key="signin_page_user")
+    u_pw = st.text_input("Password", type="password", key="signin_page_pw")
+    if st.button("Sign In", key="signin_page_btn"):
+        user = authenticate(u_name, u_pw)
+        if user:
+            st.session_state["current_user"] = user
+            st.success(f"Signed in as {user['username']} ({user['role']})")
+            go_to_page("Platform Help")
+        else:
+            st.error("Invalid credentials")
+
+elif page == "AuthRegister":
+    section_title("Register")
+    new_user = st.text_input("New username", key="reg_page_user")
+    new_pw = st.text_input("New password", type="password", key="reg_page_pw")
+    new_pw_confirm = st.text_input("Confirm password", type="password", key="reg_page_pw2")
+    if st.button("Register", key="reg_page_btn"):
+        if not new_user or not new_pw:
+            st.error("Provide username and password")
+        elif new_pw != new_pw_confirm:
+            st.error("Passwords do not match")
+        else:
+            success, msg = create_user(new_user, new_pw, role="user")
+            if success:
+                st.success(msg)
+                go_to_page("AuthSignIn")
+            else:
+                st.error(msg)
+
+
+# -----------------------------
 # Platform Help
 # -----------------------------
 elif page == "Platform Help":
     section_title("Platform Help")
-
     st.write(
         "This section can be used for platform guidance, data definitions, user notes, "
         "and compliance-monitoring methodology."
@@ -741,19 +808,9 @@ elif page == "Platform Help":
         """
     )
 
-    subsection_title("Suggested Future Admin Features")
-
-    st.markdown(
-        """
-        - User login and role-based access
-        - Data upload controls
-        - Audit log
-        - Export permissions
-        - Compliance methodology notes
-        - Data refresh timestamp
-        """
-    )
-
+    subsection_title("Authentication")
+    st.write("Use the Sign In button at the top-left of the sidebar to sign in. After signing in you'll be redirected here to access data management tools.")
+    render_data_management_ui()
 
 # -----------------------------
 # License Exceptions
@@ -767,7 +824,7 @@ elif page == "License Exceptions":
     )
 
     exception_view = licenses[licenses["license_status"] != "Active"].merge(
-        attorneys[["attorney_id", "name", "title", "office", "practice_group"]],
+        attorneys[["attorney_id", "name", "title", "office", "practice_area"]],
         on="attorney_id",
         how="left",
     )
@@ -798,7 +855,7 @@ elif page == "License Exceptions":
                 "name",
                 "title",
                 "office",
-                "practice_group",
+                "practice_area",
                 "jurisdiction",
                 "license_status",
                 "registration_expiry",
