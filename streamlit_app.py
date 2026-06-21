@@ -7,7 +7,14 @@ from src.analysis.risk_scoring import calculate_attorney_risk_scores
 from src.analysis.matter_license_check import find_matter_license_risks
 from src.analysis.load_data import load_all_data
 from src.persistence import EXPECTED_COLUMNS, save_uploaded_csv, BACKUP_DIR
-from src.auth import init_user_store, authenticate, create_user, list_users
+from src.auth import (
+    authenticate_user,
+    init_user_store,
+    list_users,
+    logout_user,
+    register_user,
+    user_exists,
+)
 import streamlit.components.v1 as components
 
 
@@ -21,6 +28,21 @@ st.set_page_config(
 )
 
 load_css()
+init_user_store()
+
+PUBLIC_PAGES = {"Executive Summary", "AuthChoice", "AuthSignIn", "AuthRegister"}
+USER_PAGES = PUBLIC_PAGES | {
+    "Attorney Directory",
+    "Matters Directory",
+    "Tableau Dashboard",
+    "CLE Compliance",
+    "Platform Help",
+    "Revenue Exposure",
+    "License Exceptions",
+    "Attorney Risk",
+    "Matter License Risks",
+}
+ADMIN_PAGES = USER_PAGES
 
 # -----------------------------
 # Cached Data Loaders
@@ -82,8 +104,70 @@ def section_title(text):
 def subsection_title(text):
     st.markdown(f'<div class="subsection-title">{text}</div>', unsafe_allow_html=True)
 
+
 def go_to_page(page_name):
     st.session_state["page"] = page_name
+
+
+def init_auth_session():
+    st.session_state.setdefault("authenticated", False)
+    st.session_state.setdefault("username", None)
+    st.session_state.setdefault("role", "anonymous")
+    st.session_state.setdefault("page", "Executive Summary")
+    st.session_state.setdefault("current_user", None)
+
+
+def set_authenticated_user(user):
+    st.session_state["authenticated"] = True
+    st.session_state["username"] = user["username"]
+    st.session_state["role"] = user.get("role", "user")
+    st.session_state["current_user"] = {
+        "username": st.session_state["username"],
+        "role": st.session_state["role"],
+    }
+
+
+def current_role():
+    if not st.session_state.get("authenticated"):
+        return "anonymous"
+    return st.session_state.get("role", "user")
+
+
+def can_access_page(page_name):
+    role = current_role()
+    if role == "admin":
+        return page_name in ADMIN_PAGES
+    if role == "user":
+        return page_name in USER_PAGES
+    return page_name in PUBLIC_PAGES
+
+
+def permitted_sidebar_pages():
+    base_pages = ["Executive Summary"]
+    signed_in_pages = [
+        "Attorney Directory",
+        "Matters Directory",
+        "Tableau Dashboard",
+        "CLE Compliance",
+        "Platform Help",
+    ]
+    return base_pages + signed_in_pages if st.session_state.get("authenticated") else base_pages
+
+
+def rerun_app():
+    try:
+        st.rerun()
+    except AttributeError:
+        st.experimental_rerun()
+
+
+def render_register_jump():
+    if st.button("Register", key="signin_jump_register"):
+        go_to_page("AuthRegister")
+        rerun_app()
+
+
+init_auth_session()
 
 
 def render_clickable_kpi_card(label, value, target_page, key):
@@ -154,16 +238,7 @@ def render_attorney_filters(attorney_df):
 
 def render_auth_ui():
     """Render the sign-in / register and data management UI."""
-    # User authentication + upload / download
-    init_user_store()
-
-    if "current_user" not in st.session_state:
-        st.session_state["current_user"] = None
-
-    def _sign_out():
-        st.session_state["current_user"] = None
-
-    if st.session_state["current_user"] is None:
+    if not st.session_state.get("authenticated"):
         # Use side-by-side columns so both forms are visible
         col_sign, col_reg = st.columns(2)
 
@@ -173,12 +248,15 @@ def render_auth_ui():
             u_pw = st.text_input("Password", type="password", key="signin_pw")
             st.markdown('<div class="auth-buttons">', unsafe_allow_html=True)
             if st.button("Sign In", key="sign_in_btn"):
-                user = authenticate(u_name, u_pw)
+                user = authenticate_user(u_name, u_pw)
                 if user:
-                    st.session_state["current_user"] = user
+                    set_authenticated_user(user)
                     st.success(f"Signed in as {user['username']} ({user['role']})")
                 else:
-                    st.error("Invalid credentials")
+                    if user_exists(u_name):
+                        st.error("Incorrect password. Please try again.")
+                    else:
+                        st.warning("User not found. Please register first.")
             st.markdown('</div>', unsafe_allow_html=True)
 
         with col_reg:
@@ -188,12 +266,16 @@ def render_auth_ui():
             new_pw_confirm = st.text_input("Confirm password", type="password", key="reg_pw2")
             st.markdown('<div class="auth-buttons">', unsafe_allow_html=True)
             if st.button("Register", key="register_btn"):
-                if not new_user or not new_pw:
-                    st.error("Provide username and password")
+                if not new_user:
+                    st.warning("Username must not be empty.")
+                elif not new_pw:
+                    st.warning("Password must not be empty.")
+                elif len(new_pw) <= 8:
+                    st.warning("Password must be more than 8 characters.")
                 elif new_pw != new_pw_confirm:
                     st.error("Passwords do not match")
                 else:
-                    success, msg = create_user(new_user, new_pw, role="user")
+                    success, msg = register_user(new_user, new_pw, role="user")
                     if success:
                         st.success(msg)
                     else:
@@ -206,7 +288,8 @@ def render_auth_ui():
         user = st.session_state["current_user"]
         st.success(f"Signed in as {user['username']} ({user['role']})")
         if st.button("Sign out"):
-            _sign_out()
+            logout_user()
+            rerun_app()
 
         # Upload / Download available to signed-in users (both user and admin roles)
         subsection_title("Upload CSV Data")
@@ -303,7 +386,12 @@ def render_data_management_ui():
 
     st.success(f"Signed in as {user['username']} ({user['role']})")
     if st.button("Sign out", key="dm_signout"):
-        st.session_state["current_user"] = None
+        logout_user()
+        rerun_app()
+
+    if user.get("role") != "admin":
+        st.info("Data upload, downloads, audit logs, and user administration are available to admin users.")
+        return
 
     subsection_title("Upload CSV Data")
     st.write("Upload a dataset CSV to replace or append to the existing data file.")
@@ -391,8 +479,13 @@ def render_data_management_ui():
 # Sidebar Navigation
 # -----------------------------
 # Sign-in shortcut above the header
-if st.sidebar.button("Sign In", key="sidebar_signin_btn"):
-    go_to_page("AuthChoice")
+account_label = "Sign Out" if st.session_state.get("authenticated") else "Sign In"
+if st.sidebar.button(account_label, key="sidebar_account_btn"):
+    if st.session_state.get("authenticated"):
+        logout_user()
+    else:
+        go_to_page("AuthSignIn")
+    rerun_app()
 
 st.sidebar.markdown(
     """
@@ -404,14 +497,7 @@ st.sidebar.markdown(
     unsafe_allow_html=True,
 )
 
-sidebar_pages = [
-    "Executive Summary",
-    "Attorney Directory",
-    "Matters Directory",
-    "Tableau Dashboard",
-    "CLE Compliance",
-    "Platform Help",
-]
+sidebar_pages = permitted_sidebar_pages()
 
 hidden_pages = [
     "Revenue Exposure",
@@ -426,6 +512,10 @@ all_pages = sidebar_pages + hidden_pages
 if "page" not in st.session_state:
     st.session_state["page"] = "Executive Summary"
 
+if not can_access_page(st.session_state["page"]):
+    st.session_state["auth_notice"] = "Please sign in to access that page."
+    st.session_state["page"] = "AuthSignIn"
+
 sidebar_index = (
     sidebar_pages.index(st.session_state["page"])
     if st.session_state["page"] in sidebar_pages
@@ -433,6 +523,8 @@ sidebar_index = (
 )
 
 if "sidebar_selection" not in st.session_state:
+    st.session_state["sidebar_selection"] = sidebar_pages[sidebar_index]
+elif st.session_state["sidebar_selection"] not in sidebar_pages:
     st.session_state["sidebar_selection"] = sidebar_pages[sidebar_index]
 
 
@@ -461,6 +553,12 @@ st.markdown(
     '<div class="app-subtitle">Attorney licensing, CLE compliance, matter assignment risk, and revenue exposure analytics.</div>',
     unsafe_allow_html=True,
 )
+
+if st.session_state.get("flash_success"):
+    st.success(st.session_state.pop("flash_success"))
+
+if st.session_state.get("auth_notice"):
+    st.warning(st.session_state.pop("auth_notice"))
 
 # -----------------------------
 # Executive Summary
@@ -744,24 +842,34 @@ elif page == "AuthChoice":
     st.write("Choose an option to continue.")
     c1, c2 = st.columns(2)
     with c1:
-        if st.button("Sign In"):
+        if st.button("Sign In", key="auth_choice_signin"):
             go_to_page("AuthSignIn")
+            rerun_app()
     with c2:
-        if st.button("Register"):
+        if st.button("Register", key="auth_choice_register"):
             go_to_page("AuthRegister")
+            rerun_app()
 
 elif page == "AuthSignIn":
     section_title("Sign In")
     u_name = st.text_input("Username", key="signin_page_user")
     u_pw = st.text_input("Password", type="password", key="signin_page_pw")
     if st.button("Sign In", key="signin_page_btn"):
-        user = authenticate(u_name, u_pw)
+        user = authenticate_user(u_name, u_pw)
         if user:
-            st.session_state["current_user"] = user
-            st.success(f"Signed in as {user['username']} ({user['role']})")
-            go_to_page("Platform Help")
+            set_authenticated_user(user)
+            st.session_state["flash_success"] = f"Signed in as {user['username']} ({user['role']})."
+            go_to_page("Executive Summary")
+            rerun_app()
         else:
-            st.error("Invalid credentials")
+            if user_exists(u_name):
+                st.error("Incorrect password. Please try again.")
+            else:
+                st.warning("User not found. Please register first.")
+                render_register_jump()
+    elif st.button("Create an account", key="signin_page_register_link"):
+        go_to_page("AuthRegister")
+        rerun_app()
 
 elif page == "AuthRegister":
     section_title("Register")
@@ -769,17 +877,28 @@ elif page == "AuthRegister":
     new_pw = st.text_input("New password", type="password", key="reg_page_pw")
     new_pw_confirm = st.text_input("Confirm password", type="password", key="reg_page_pw2")
     if st.button("Register", key="reg_page_btn"):
-        if not new_user or not new_pw:
-            st.error("Provide username and password")
+        if not new_user:
+            st.warning("Username must not be empty.")
+        elif not new_pw:
+            st.warning("Password must not be empty.")
+        elif len(new_pw) <= 8:
+            st.warning("Password must be more than 8 characters.")
         elif new_pw != new_pw_confirm:
             st.error("Passwords do not match")
         else:
-            success, msg = create_user(new_user, new_pw, role="user")
+            success, msg = register_user(new_user, new_pw, role="user")
             if success:
-                st.success(msg)
+                st.session_state["flash_success"] = msg
                 go_to_page("AuthSignIn")
+                rerun_app()
             else:
-                st.error(msg)
+                if "already being used" in msg:
+                    st.error(msg)
+                else:
+                    st.warning(msg)
+    elif st.button("Back to Sign In", key="register_page_signin_link"):
+        go_to_page("AuthSignIn")
+        rerun_app()
 
 
 # -----------------------------
