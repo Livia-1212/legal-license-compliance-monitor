@@ -42,7 +42,7 @@ USER_PAGES = PUBLIC_PAGES | {
     "Attorney Risk",
     "Matter License Risks",
 }
-ADMIN_PAGES = USER_PAGES
+ADMIN_PAGES = USER_PAGES | {"Admin"}
 
 # -----------------------------
 # Cached Data Loaders
@@ -151,7 +151,11 @@ def permitted_sidebar_pages():
         "CLE Compliance",
         "Platform Help",
     ]
-    return base_pages + signed_in_pages if st.session_state.get("authenticated") else base_pages
+    if not st.session_state.get("authenticated"):
+        return base_pages
+    if current_role() == "admin":
+        return base_pages + signed_in_pages[:-1] + ["Admin", signed_in_pages[-1]]
+    return base_pages + signed_in_pages
 
 
 def rerun_app():
@@ -513,8 +517,12 @@ if "page" not in st.session_state:
     st.session_state["page"] = "Executive Summary"
 
 if not can_access_page(st.session_state["page"]):
-    st.session_state["auth_notice"] = "Please sign in to access that page."
-    st.session_state["page"] = "AuthSignIn"
+    if st.session_state.get("authenticated"):
+        st.session_state["auth_notice"] = "Admin access is required for that page."
+        st.session_state["page"] = "Executive Summary"
+    else:
+        st.session_state["auth_notice"] = "Please sign in to access that page."
+        st.session_state["page"] = "AuthSignIn"
 
 sidebar_index = (
     sidebar_pages.index(st.session_state["page"])
@@ -566,75 +574,81 @@ if st.session_state.get("auth_notice"):
 if page == "Executive Summary":
     section_title("Executive Summary")
 
-    c1, c2, c3, c4 = st.columns(4)
-
-    with c1:
-        render_clickable_kpi_card(
-            "TOTAL ATTORNEYS",
-            f"{summary['total_attorneys']}",
-            "Attorney Directory",
-            "kpi_total_attorneys",
+    if not st.session_state.get("authenticated"):
+        st.markdown(
+            '<div class="signin-summary-message">Sign in to review your Compliance Monitor Status</div>',
+            unsafe_allow_html=True,
         )
+    else:
+        c1, c2, c3, c4 = st.columns(4)
 
-    with c2:
-        render_clickable_kpi_card(
-            "EXPIRED LICENSES",
-            f"{summary['expired_licenses']}",
-            "License Exceptions",
-            "kpi_expired_licenses",
-        )
+        with c1:
+            render_clickable_kpi_card(
+                "TOTAL ATTORNEYS",
+                f"{summary['total_attorneys']}",
+                "Attorney Directory",
+                "kpi_total_attorneys",
+            )
 
-    with c3:
-        render_clickable_kpi_card(
-            "CLE DEFICIENT RECORDS",
-            f"{summary['cle_deficient_records']}",
-            "CLE Compliance",
-            "kpi_cle_deficient",
-        )
+        with c2:
+            render_clickable_kpi_card(
+                "EXPIRED LICENSES",
+                f"{summary['expired_licenses']}",
+                "License Exceptions",
+                "kpi_expired_licenses",
+            )
 
-    with c4:
-        render_clickable_kpi_card(
-            "TOTAL REVENUE EXPOSURE",
-            f"${summary['total_revenue_exposure']:,.0f}",
-            "Revenue Exposure",
-            "kpi_total_revenue",
-        )
+        with c3:
+            render_clickable_kpi_card(
+                "CLE DEFICIENT RECORDS",
+                f"{summary['cle_deficient_records']}",
+                "CLE Compliance",
+                "kpi_cle_deficient",
+            )
 
-    st.markdown("<br>", unsafe_allow_html=True)
+        with c4:
+            render_clickable_kpi_card(
+                "TOTAL REVENUE EXPOSURE",
+                f"${summary['total_revenue_exposure']:,.0f}",
+                "Revenue Exposure",
+                "kpi_total_revenue",
+            )
 
-    left, right = st.columns(2)
+        st.markdown("<br>", unsafe_allow_html=True)
 
-    with left:
-        subsection_title("Attorney Compliance Overview")
+        left, right = st.columns(2)
 
-        risk_tier_counts = (
-            risk_scores["risk_tier"]
-            .value_counts()
-            .reset_index()
-        )
-        risk_tier_counts.columns = ["Risk Tier", "Attorney Count"]
+        with left:
+            subsection_title("Attorney Compliance Overview")
 
-        st.bar_chart(
-            risk_tier_counts,
-            x="Risk Tier",
-            y="Attorney Count",
-        )
+            risk_tier_counts = (
+                risk_scores["risk_tier"]
+                .value_counts()
+                .reset_index()
+            )
+            risk_tier_counts.columns = ["Risk Tier", "Attorney Count"]
 
-    with right:
-        subsection_title("License Status Distribution")
+            st.bar_chart(
+                risk_tier_counts,
+                x="Risk Tier",
+                y="Attorney Count",
+            )
 
-        license_status_counts = (
-            licenses["license_status"]
-            .value_counts()
-            .reset_index()
-        )
-        license_status_counts.columns = ["License Status", "Count"]
+        with right:
+            subsection_title("License Status Distribution")
 
-        st.bar_chart(
-            license_status_counts,
-            x="License Status",
-            y="Count",
-        )
+            license_status_counts = (
+                licenses["license_status"]
+                .value_counts()
+                .reset_index()
+            )
+            license_status_counts.columns = ["License Status", "Count"]
+
+            st.bar_chart(
+                license_status_counts,
+                x="License Status",
+                y="Count",
+            )
 
 
 # -----------------------------
@@ -928,7 +942,13 @@ elif page == "Platform Help":
     )
 
     subsection_title("Authentication")
-    st.write("Use the Sign In button at the top-left of the sidebar to sign in. After signing in you'll be redirected here to access data management tools.")
+    st.write("Use the Sign In button at the top-left of the sidebar to access role-based dashboard pages.")
+
+# -----------------------------
+# Admin
+# -----------------------------
+elif page == "Admin":
+    section_title("Admin")
     render_data_management_ui()
 
 # -----------------------------

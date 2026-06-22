@@ -151,6 +151,14 @@
         margin-bottom: 0.75rem;
     }
 
+    .signin-summary-message {
+        font-size: 1.55rem;
+        font-weight: 700;
+        color: #111827;
+        margin-top: 1.75rem;
+        line-height: 1.35;
+    }
+
     /* -----------------------------
        KPI cards
     ----------------------------- */
