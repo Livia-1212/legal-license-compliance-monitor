@@ -1,3 +1,12 @@
+"""
+Legacy CSV upload persistence helper.
+
+This module supports the current CSV-backed upload workflow used by streamlit_app.py.
+Phase 8 introduces PostgreSQL persistence under src/db/.
+
+Do not add new database logic here.
+"""
+
 from pathlib import Path
 from datetime import datetime
 import pandas as pd
