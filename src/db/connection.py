@@ -1,0 +1,21 @@
+import os
+
+import psycopg2
+from dotenv import load_dotenv
+
+
+load_dotenv()
+
+
+def get_connection():
+    """
+    Create and return a PostgreSQL database connection.
+    Connection settings are loaded from environment variables.
+    """
+    return psycopg2.connect(
+        dbname=os.getenv("POSTGRES_DB", "legal_license_compliance"),
+        user=os.getenv("POSTGRES_USER", "postgres"),
+        password=os.getenv("POSTGRES_PASSWORD", ""),
+        host=os.getenv("POSTGRES_HOST", "localhost"),
+        port=os.getenv("POSTGRES_PORT", "5432"),
+    )
