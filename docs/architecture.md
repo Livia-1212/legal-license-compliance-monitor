@@ -12,23 +12,30 @@ The system ingests attorney, licensing, CLE, and matter assignment data, perform
 
 ## Architecture Flow
 
-Raw Data Sources (CSV)
+Raw Data Sources (CSV Seed)
 
 ↓
 
-Data Storage Layer
+Data Storage Layer (PostgreSQL Database)
 
 ↓
 
-Compliance (SQL) Validation Layer
+Repository Layer
 
 ↓
 
-Risk Analysis Layer
+Compliance Validation Layer  
+(SQL Controls + Service Layer)
 
 ↓
 
-Reporting Layer (Compliance Dashboard Dataset)
+Risk Analysis Layer  
+(Python Analytics + Streamlit Dashboard)
+
+↓
+
+Reporting Layer  
+(Dashboard + BigQuery Analytics + Future AI Agent Workflow)
 
 ---
 
