@@ -5,7 +5,7 @@ import os
 from src.dashboard.dashboard_summary import generate_dashboard_summary
 from src.analysis.risk_scoring import calculate_attorney_risk_scores
 from src.analysis.matter_license_check import find_matter_license_risks
-from src.analysis.load_data import load_all_data
+from src.db.data_source import get_data_source, load_application_data
 from src.persistence import EXPECTED_COLUMNS, save_uploaded_csv, BACKUP_DIR
 from src.auth import (
     authenticate_user,
@@ -49,7 +49,7 @@ ADMIN_PAGES = USER_PAGES | {"Admin"}
 # -----------------------------
 @st.cache_data
 def get_data():
-    return load_all_data()
+    return load_application_data()
 
 
 @st.cache_data
@@ -500,6 +500,8 @@ st.sidebar.markdown(
     """,
     unsafe_allow_html=True,
 )
+
+st.sidebar.caption(f"Data source: {get_data_source()}")
 
 sidebar_pages = permitted_sidebar_pages()
 
