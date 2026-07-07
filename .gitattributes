@@ -1,0 +1,3 @@
+
+# Make sure SQL files are recognized as SQL
+*.sql linguist-language=SQL
