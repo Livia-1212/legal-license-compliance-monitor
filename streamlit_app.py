@@ -3,9 +3,11 @@ import pandas as pd
 import os
 
 from src.dashboard.dashboard_summary import generate_dashboard_summary
+from src.dashboard.admin_data_entry import render_admin_data_entry_page
 from src.analysis.risk_scoring import calculate_attorney_risk_scores
 from src.analysis.matter_license_check import find_matter_license_risks
 from src.db.data_source import get_data_source, load_application_data
+
 from src.persistence import EXPECTED_COLUMNS, save_uploaded_csv, BACKUP_DIR
 from src.auth import (
     authenticate_user,
@@ -42,7 +44,7 @@ USER_PAGES = PUBLIC_PAGES | {
     "Attorney Risk",
     "Matter License Risks",
 }
-ADMIN_PAGES = USER_PAGES | {"Admin"}
+ADMIN_PAGES = USER_PAGES | {"Admin", "Admin Data Entry"}
 
 # -----------------------------
 # Cached Data Loaders
@@ -80,6 +82,31 @@ licenses = data["licenses"]
 cle_records = data["cle_records"]
 matters = data["matters"]
 assignments = data["matter_assignments"]
+
+def refresh_application_data():
+    """
+    Clear Streamlit caches and reload application data after PostgreSQL writes.
+    """
+    get_data.clear()
+    get_dashboard_summary.clear()
+    get_risk_scores.clear()
+    get_matter_license_risks.clear()
+
+    refreshed_data = get_data()
+    refreshed_summary = get_dashboard_summary()
+    refreshed_risk_scores = get_risk_scores()
+    refreshed_matter_license_risks = get_matter_license_risks()
+
+    globals()["data"] = refreshed_data
+    globals()["summary"] = refreshed_summary
+    globals()["risk_scores"] = refreshed_risk_scores
+    globals()["matter_license_risks"] = refreshed_matter_license_risks
+
+    globals()["attorneys"] = refreshed_data["attorneys"]
+    globals()["licenses"] = refreshed_data["licenses"]
+    globals()["cle_records"] = refreshed_data["cle_records"]
+    globals()["matters"] = refreshed_data["matters"]
+    globals()["assignments"] = refreshed_data["matter_assignments"]
 
 
 # -----------------------------
@@ -154,7 +181,7 @@ def permitted_sidebar_pages():
     if not st.session_state.get("authenticated"):
         return base_pages
     if current_role() == "admin":
-        return base_pages + signed_in_pages[:-1] + ["Admin", signed_in_pages[-1]]
+        return base_pages + signed_in_pages[:-1] + ["Admin", "Admin Data Entry", signed_in_pages[-1]]
     return base_pages + signed_in_pages
 
 
@@ -315,18 +342,7 @@ def render_auth_ui():
                 uploader_name = user.get("username")
                 success, message = save_uploaded_csv(upload_file, dataset, mode=upload_mode, uploader=uploader_name)
                 if success:
-                    try:
-                        get_data.clear()
-                    except Exception:
-                        pass
-
-                    data = get_data()
-                    # refresh globals
-                    globals()["attorneys"] = data["attorneys"]
-                    globals()["licenses"] = data["licenses"]
-                    globals()["cle_records"] = data["cle_records"]
-                    globals()["matters"] = data["matters"]
-                    globals()["assignments"] = data["matter_assignments"]
+                    refresh_application_data()
 
                     st.success(f"Upload successful: {message}")
                 else:
@@ -416,17 +432,7 @@ def render_data_management_ui():
             uploader_name = user.get("username")
             success, message = save_uploaded_csv(upload_file, dataset, mode=upload_mode, uploader=uploader_name)
             if success:
-                try:
-                    get_data.clear()
-                except Exception:
-                    pass
-
-                data = get_data()
-                globals()["attorneys"] = data["attorneys"]
-                globals()["licenses"] = data["licenses"]
-                globals()["cle_records"] = data["cle_records"]
-                globals()["matters"] = data["matters"]
-                globals()["assignments"] = data["matter_assignments"]
+                refresh_application_data()
 
                 st.success(f"Upload successful: {message}")
             else:
@@ -542,11 +548,12 @@ def update_page_from_sidebar():
     st.session_state["page"] = st.session_state["sidebar_selection"]
 
 selected_page = st.sidebar.radio(
-    "",
+    "Navigation",
     sidebar_pages,
     index=sidebar_index,
     key="sidebar_selection",
     on_change=update_page_from_sidebar,
+    label_visibility="collapsed",
 )
 
 page = st.session_state["page"]
@@ -945,6 +952,12 @@ elif page == "Platform Help":
 
     subsection_title("Authentication")
     st.write("Use the Sign In button at the top-left of the sidebar to access role-based dashboard pages.")
+
+# -----------------------------
+# Admin Data Entry
+# -----------------------------
+elif page == "Admin Data Entry":
+    render_admin_data_entry_page(refresh_application_data)
 
 # -----------------------------
 # Admin
