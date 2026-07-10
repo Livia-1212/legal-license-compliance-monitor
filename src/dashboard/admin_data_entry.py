@@ -7,6 +7,9 @@ from src.db.repositories import (
     create_cle_record,
     create_matter,
     create_matter_assignment,
+    get_eligible_cle_attorneys,
+    get_unassigned_open_matters,
+    get_eligible_attorneys_for_matter,
 )
 
 
@@ -73,8 +76,9 @@ def render_admin_data_entry_page(refresh_callback):
                 attorney_id = st.number_input(
                     "Attorney ID",
                     min_value=1,
+                    value=1,
                     step=1,
-                    value=100,
+                    format="%d",
                     key="license_attorney_id",
                 )
                 jurisdiction = st.text_input("Jurisdiction", placeholder="NY")
@@ -115,51 +119,198 @@ def render_admin_data_entry_page(refresh_callback):
                             st.error(f"Could not add license: {e}")
 
     with st.expander("Add CLE Record"):
-            with st.form("add_cle_record_form"):
-                attorney_id = st.number_input(
+        try:
+            eligible_attorneys = get_eligible_cle_attorneys()
+        except Exception as e:
+            eligible_attorneys = []
+            st.error(f"Could not load eligible attorneys: {e}")
+
+        if not eligible_attorneys:
+            st.warning(
+                "No eligible attorneys are available. An attorney must have "
+                "active employment status, an active unexpired license, and "
+                "a configured jurisdiction CLE rule."
+            )
+        else:
+            attorney_options = {
+                (
+                    f"{attorney['name']} — "
+                    f"Attorney ID {attorney['attorney_id']} — "
+                    f"{attorney['jurisdiction']}"
+                ): attorney
+                for attorney in eligible_attorneys
+            }
+
+            selected_label = st.selectbox(
+                "Attorney Name",
+                options=list(attorney_options.keys()),
+                key="cle_attorney_selection",
+            )
+
+            selected_attorney = attorney_options[selected_label]
+
+            attorney_id = int(selected_attorney["attorney_id"])
+            attorney_name = selected_attorney["name"]
+            email = selected_attorney["email"]
+            office = selected_attorney["office"]
+            practice_area = selected_attorney["practice_area"]
+            jurisdiction = selected_attorney["jurisdiction"]
+            admission_date = selected_attorney["admission_date"]
+            license_status = selected_attorney["license_status"]
+            registration_expiry = selected_attorney["registration_expiry"]
+            required_hours = float(selected_attorney["cle_required_hours"])
+            registration_cycle = selected_attorney["registration_cycle"]
+
+            calculated_deadline = calculate_next_cle_deadline(
+                admission_date,
+                registration_cycle,
+            )
+
+            st.markdown("#### Attorney and License Details")
+
+            detail_col_1, detail_col_2 = st.columns(2)
+
+            with detail_col_1:
+                st.text_input(
                     "Attorney ID",
-                    key="cle_attorney_id",
-                    placeholder="A009",
+                    value=str(attorney_id),
+                    disabled=True,
+                    key="cle_display_attorney_id",
                 )
-                jurisdiction = st.text_input(
+
+                st.text_input(
+                    "Attorney Name",
+                    value=attorney_name,
+                    disabled=True,
+                    key="cle_display_attorney_name",
+                )
+
+                st.text_input(
+                    "Email",
+                    value=email or "",
+                    disabled=True,
+                    key="cle_display_email",
+                )
+
+                st.text_input(
+                    "Office",
+                    value=office or "",
+                    disabled=True,
+                    key="cle_display_office",
+                )
+
+            with detail_col_2:
+                st.text_input(
+                    "Practice Area",
+                    value=practice_area or "",
+                    disabled=True,
+                    key="cle_display_practice_area",
+                )
+
+                st.text_input(
                     "Jurisdiction",
-                    key="cle_jurisdiction",
-                    placeholder="NY",
+                    value=jurisdiction,
+                    disabled=True,
+                    key="cle_display_jurisdiction",
                 )
-                required_hours = st.number_input(
+
+                st.text_input(
+                    "License Status",
+                    value=license_status,
+                    disabled=True,
+                    key="cle_display_license_status",
+                )
+
+                st.text_input(
+                    "License Registration Expiry",
+                    value=str(registration_expiry),
+                    disabled=True,
+                    key="cle_display_registration_expiry",
+                )
+
+            st.markdown("#### CLE Calculation")
+
+            completed_hours = st.number_input(
+                "Completed Hours",
+                min_value=0.0,
+                value=0.0,
+                step=0.5,
+                key="cle_completed_hours",
+            )
+
+            remaining_hours = max(
+                required_hours - float(completed_hours),
+                0.0,
+            )
+
+            calculation_col_1, calculation_col_2, calculation_col_3 = st.columns(3)
+
+            with calculation_col_1:
+                st.metric(
                     "Required Hours",
-                    min_value=0.0,
-                    value=24.0,
-                    step=0.5,
+                    f"{required_hours:.1f}",
                 )
-                completed_hours = st.number_input(
-                    "Completed Hours",
-                    min_value=0.0,
-                    value=0.0,
-                    step=0.5,
+
+            with calculation_col_2:
+                st.metric(
+                    "Remaining Hours",
+                    f"{remaining_hours:.1f}",
                 )
-                deadline = st.date_input("CLE Deadline")
 
-                submitted = st.form_submit_button("Save CLE Record")
+            with calculation_col_3:
+                st.metric(
+                    "Registration Cycle",
+                    registration_cycle,
+                )
 
-                if submitted:
-                    if not attorney_id or not jurisdiction:
-                        st.error("Attorney ID and jurisdiction are required.")
-                    else:
-                        cle_data = {
-                            "attorney_id": int(attorney_id),
-                            "jurisdiction": jurisdiction.strip(),
-                            "required_hours": float(required_hours),
-                            "completed_hours": float(completed_hours),
-                            "deadline": deadline,
-                        }
+            if calculated_deadline:
+                st.text_input(
+                    "Calculated CLE Deadline",
+                    value=str(calculated_deadline),
+                    disabled=True,
+                    key="cle_display_deadline",
+                )
+            else:
+                st.error(
+                    "The CLE deadline could not be calculated because the "
+                    "jurisdiction registration cycle is not supported."
+                )
 
-                        try:
-                            create_cle_record(cle_data)
-                            refresh_callback()
-                            st.success("CLE record added successfully.")
-                        except Exception as e:
-                            st.error(f"Could not add CLE record: {e}")
+            st.markdown("#### Review Before Saving")
+
+            st.info(
+                f"""
+                **Attorney:** {attorney_name}  
+                **Attorney ID:** {attorney_id}  
+                **Jurisdiction:** {jurisdiction}  
+                **Required Hours:** {required_hours:.1f}  
+                **Completed Hours:** {float(completed_hours):.1f}  
+                **Remaining Hours:** {remaining_hours:.1f}  
+                **CLE Deadline:** {calculated_deadline or "Unavailable"}
+                """
+            )
+
+            save_cle_record = st.button(
+                "Save CLE Record",
+                key="save_cle_record_button",
+                disabled=calculated_deadline is None,
+            )
+
+            if save_cle_record:
+                cle_data = {
+                    "attorney_id": attorney_id,
+                    "jurisdiction": jurisdiction,
+                    "required_hours": required_hours,
+                    "completed_hours": float(completed_hours),
+                    "deadline": calculated_deadline,
+                }
+
+                try:
+                    create_cle_record(cle_data)
+                    refresh_callback()
+                    st.success("CLE record added successfully.")
+                except Exception as e:
+                    st.error(f"Could not add CLE record: {e}")
 
     with st.expander("Add Matter"):
             with st.form("add_matter_form"):
@@ -207,43 +358,228 @@ def render_admin_data_entry_page(refresh_callback):
                             st.error(f"Could not add matter: {e}")
 
     with st.expander("Add Matter Assignment"):
-            with st.form("add_matter_assignment_form"):
-                matter_id = st.text_input(
-                    "Matter ID",
-                    key="assignment_matter_id",
-                    placeholder="M009",
+        st.markdown("#### Unassigned Matters")
+
+        try:
+            unassigned_matters = get_unassigned_open_matters()
+        except Exception as e:
+            unassigned_matters = []
+            st.error(f"Could not load unassigned matters: {e}")
+
+        if not unassigned_matters:
+            st.info(
+                "There are currently no open, unassigned matters available."
+            )
+        else:
+            matter_options = {
+                (
+                    f"{matter['matter_id']} — "
+                    f"{matter['matter_name']} — "
+                    f"{matter['jurisdiction']}"
+                ): matter
+                for matter in unassigned_matters
+            }
+
+            selected_matter_label = st.selectbox(
+                "Matter ID",
+                options=list(matter_options.keys()),
+                key="assignment_matter_selection",
+            )
+
+            selected_matter = matter_options[selected_matter_label]
+
+            matter_id = selected_matter["matter_id"]
+            matter_name = selected_matter["matter_name"]
+            jurisdiction = selected_matter["jurisdiction"]
+            client = selected_matter["client"]
+            matter_status = selected_matter["status"]
+
+            
+            st.markdown("#### Matter Details")
+
+            matter_col_1, matter_col_2 = st.columns(2)
+
+            with matter_col_1:
+                st.markdown("**Selected Matter ID**")
+                st.write(str(matter_id))
+
+                st.markdown("**Matter Name**")
+                st.write(matter_name)
+
+            with matter_col_2:
+                st.markdown("**Jurisdiction**")
+                st.write(jurisdiction)
+
+                st.markdown("**Client**")
+                st.write(client)
+
+            st.markdown("**Matter Status**")
+            st.write(matter_status)
+            
+            try:
+                eligible_attorneys = get_eligible_attorneys_for_matter(
+                    jurisdiction
                 )
-                attorney_id = st.number_input(
-                    "Attorney ID",
-                    key="assignment_attorney_id",
-                    placeholder="A009",
+            except Exception as e:
+                eligible_attorneys = []
+                st.error(
+                    f"Could not load eligible attorneys: {e}"
                 )
+
+            if not eligible_attorneys:
+                st.warning(
+                    f"No eligible attorneys have an active, unexpired "
+                    f"{jurisdiction} license."
+                )
+            else:
+                st.markdown("#### Select Assigned Attorney")
+
+                attorney_options = {
+                    (
+                        f"{attorney['name']} — "
+                        f"Attorney ID {attorney['attorney_id']} — "
+                        f"{attorney['jurisdiction']}"
+                    ): attorney
+                    for attorney in eligible_attorneys
+                }
+
+                selected_attorney_label = st.selectbox(
+                    "Available Attorney",
+                    options=list(attorney_options.keys()),
+                    key="assignment_attorney_selection",
+                )
+
+                selected_attorney = attorney_options[
+                    selected_attorney_label
+                ]
+
+                attorney_id = int(
+                    selected_attorney["attorney_id"]
+                )
+
+                attorney_name = selected_attorney["name"]
+
+                attorney_col_1, attorney_col_2 = st.columns(2)
+
+                with attorney_col_1:
+                    st.markdown("**Attorney Name**")
+                    st.write(attorney_name)
+
+                    st.markdown("**Attorney ID**")
+                    st.write(str(attorney_id))
+
+                with attorney_col_2:
+                    st.markdown("**License Jurisdiction**")
+                    st.write(selected_attorney["jurisdiction"])
+
+                    st.markdown("**License Status**")
+                    st.write(selected_attorney["license_status"])
+
                 role = st.selectbox(
                     "Assignment Role",
-                    ["Lead Attorney", "Supporting Attorney", "Reviewer"],
+                    [
+                        "Lead Attorney",
+                        "Supporting Attorney",
+                        "Reviewer",
+                    ],
+                    key="assignment_role",
                 )
-                assignment_date = st.date_input("Assignment Date")
 
-                submitted = st.form_submit_button("Save Matter Assignment")
+                assignment_date = st.date_input(
+                    "Assignment Date",
+                    value=date.today(),
+                    key="assignment_date",
+                )
 
-                if submitted:
-                    if not matter_id or not attorney_id or not role:
-                        st.error("Matter ID, attorney ID, and role are required.")
-                    else:
-                        assignment_data = {
-                            "matter_id": matter_id.strip(),
-                            "attorney_id": int(attorney_id),
-                            "role": role,
-                            "assignment_date": assignment_date,
-                        }
+                st.markdown("#### Review Before Saving")
 
-                        try:
-                            create_matter_assignment(assignment_data)
-                            refresh_callback()
-                            st.success("Matter assignment added successfully.")
-                        except Exception as e:
-                            st.error(f"Could not add matter assignment: {e}")
+                st.info(
+                    f"""
+                    **Matter ID:** {matter_id}  
+                    **Matter Name:** {matter_name}  
+                    **Client:** {client}  
+                    **Jurisdiction:** {jurisdiction}  
+                    **Assigned Attorney:** {attorney_name}  
+                    **Assigned Attorney ID:** {attorney_id}  
+                    **Assignment Role:** {role}  
+                    **Assignment Date:** {assignment_date}
+                    """
+                )
 
+                save_assignment = st.button(
+                    "Save Matter Assignment",
+                    key="save_matter_assignment_button",
+                )
+
+                if save_assignment:
+                    assignment_data = {
+                        "matter_id": str(matter_id).strip(),
+                        "attorney_id": attorney_id,
+                        "role": role,
+                        "assignment_date": assignment_date,
+                    }
+
+                    try:
+                        create_matter_assignment(
+                            assignment_data
+                        )
+                        refresh_callback()
+
+                        st.success(
+                            "Matter assignment added successfully."
+                        )
+
+                        st.rerun()
+
+                    except Exception as e:
+                        st.error(
+                            f"Could not add matter assignment: {e}"
+                        )
+
+
+def add_years_safely(original_date, years):
+    """
+    Add whole years to a date while safely handling February 29.
+    """
+    try:
+        return original_date.replace(year=original_date.year + years)
+    except ValueError:
+        return original_date.replace(
+            year=original_date.year + years,
+            month=2,
+            day=28,
+        )
+
+
+def get_cycle_years(registration_cycle):
+    """
+    Convert the jurisdiction registration cycle into a year count.
+    """
+    cycle_years = {
+        "Annual": 1,
+        "Biennial": 2,
+        "Triennial": 3,
+    }
+
+    return cycle_years.get(registration_cycle)
+
+
+def calculate_next_cle_deadline(admission_date, registration_cycle):
+    """
+    Calculate the next CLE deadline based on the attorney's admission date
+    and the jurisdiction's configured registration cycle.
+    """
+    cycle_years = get_cycle_years(registration_cycle)
+
+    if not admission_date or not cycle_years:
+        return None
+
+    deadline = add_years_safely(admission_date, cycle_years)
+
+    while deadline < date.today():
+        deadline = add_years_safely(deadline, cycle_years)
+
+    return deadline
 
 def section_title(text):
     st.markdown(f'<div class="section-title">{text}</div>', unsafe_allow_html=True)

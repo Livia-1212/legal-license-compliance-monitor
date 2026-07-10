@@ -7,6 +7,7 @@ from src.dashboard.admin_data_entry import render_admin_data_entry_page
 from src.analysis.risk_scoring import calculate_attorney_risk_scores
 from src.analysis.matter_license_check import find_matter_license_risks
 from src.db.data_source import get_data_source, load_application_data
+from src.db.repositories import load_matter_directory_with_assignments
 
 from src.persistence import EXPECTED_COLUMNS, save_uploaded_csv, BACKUP_DIR
 from src.auth import (
@@ -67,6 +68,10 @@ def get_risk_scores():
 @st.cache_data
 def get_matter_license_risks():
     return find_matter_license_risks()
+
+@st.cache_data
+def get_matter_directory_data():
+    return load_matter_directory_with_assignments()
 
 
 # -----------------------------
@@ -703,7 +708,7 @@ elif page == "Matters Directory":
         "and new intake matters."
     )
 
-    matter_view = matters.copy()
+    matter_view = get_matter_directory_data()
 
     c1, c2, c3 = st.columns(3)
 
