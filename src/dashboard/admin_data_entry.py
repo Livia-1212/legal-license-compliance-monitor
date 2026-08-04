@@ -7,6 +7,8 @@ from src.db.repositories import (
     create_cle_record,
     create_matter,
     create_matter_assignment,
+    search_attorneys,
+    update_attorney,
     get_eligible_cle_attorneys,
     get_unassigned_open_matters,
     get_eligible_attorneys_for_matter,
@@ -70,6 +72,196 @@ def render_admin_data_entry_page(refresh_callback):
                         st.success("Attorney added successfully.")
                     except Exception as e:
                         st.error(f"Could not add attorney: {e}")
+
+
+    with st.expander("Edit Attorney"):
+        search_term = st.text_input(
+            "Search Attorney",
+            placeholder=(
+                "Enter name, email, attorney ID, office, "
+                "or practice area"
+            ),
+            key="edit_attorney_search",
+        )
+
+        cleaned_search_term = search_term.strip()
+
+        if len(cleaned_search_term) < 2:
+            st.info("Enter at least two characters to search.")
+        else:
+            try:
+                attorneys = search_attorneys(cleaned_search_term)
+            except Exception as e:
+                attorneys = []
+                st.error(f"Could not search attorneys: {e}")
+
+            if not attorneys:
+                st.warning("No matching attorney records were found.")
+            else:
+                attorney_options = {
+                    (
+                        f"{attorney['name']} — "
+                        f"ID {attorney['attorney_id']} — "
+                        f"{attorney['email']} — "
+                        f"{attorney['office'] or 'No office'}"
+                    ): attorney
+                    for attorney in attorneys
+                }
+
+                selected_label = st.selectbox(
+                    "Matching Attorneys",
+                    options=list(attorney_options.keys()),
+                    key="edit_attorney_result",
+                )
+
+                selected_attorney = attorney_options[selected_label]
+                selected_attorney_id = int(
+                    selected_attorney["attorney_id"]
+                )
+
+                previous_attorney_id = st.session_state.get(
+                    "loaded_edit_attorney_id"
+                )
+
+                if previous_attorney_id != selected_attorney_id:
+                    st.session_state["edit_attorney_name"] = (
+                        selected_attorney["name"] or ""
+                    )
+                    st.session_state["edit_attorney_email"] = (
+                        selected_attorney["email"] or ""
+                    )
+                    st.session_state["edit_attorney_date_of_birth"] = (
+                        selected_attorney["date_of_birth"]
+                    )
+                    st.session_state["edit_attorney_title"] = (
+                        selected_attorney["title"] or ""
+                    )
+                    st.session_state["edit_attorney_office"] = (
+                        selected_attorney["office"] or ""
+                    )
+                    st.session_state["edit_attorney_practice_area"] = (
+                        selected_attorney["practice_area"] or ""
+                    )
+                    st.session_state[
+                        "edit_attorney_employment_status"
+                    ] = (
+                        selected_attorney["employment_status"]
+                        or "Active"
+                    )
+                    st.session_state["loaded_edit_attorney_id"] = (
+                        selected_attorney_id
+                    )
+
+                with st.form("edit_attorney_form"):
+                    st.text_input(
+                        "Attorney ID",
+                        value=str(selected_attorney_id),
+                        disabled=True,
+                    )
+
+                    edit_name = st.text_input(
+                        "Name",
+                        key="edit_attorney_name",
+                    )
+
+                    edit_email = st.text_input(
+                        "Email",
+                        key="edit_attorney_email",
+                    )
+
+                    edit_date_of_birth = st.date_input(
+                        "Date of Birth",
+                        min_value=date(1940, 1, 1),
+                        max_value=date.today(),
+                        key="edit_attorney_date_of_birth",
+                    )
+
+                    edit_title = st.text_input(
+                        "Title",
+                        key="edit_attorney_title",
+                    )
+
+                    edit_office = st.text_input(
+                        "Office",
+                        key="edit_attorney_office",
+                    )
+
+                    edit_practice_area = st.text_input(
+                        "Practice Area",
+                        key="edit_attorney_practice_area",
+                    )
+
+                    status_options = [
+                        "Active",
+                        "Inactive",
+                        "Terminated",
+                    ]
+
+                    current_status = st.session_state.get(
+                        "edit_attorney_employment_status",
+                        "Active",
+                    )
+
+                    if current_status not in status_options:
+                        current_status = "Active"
+
+                    edit_employment_status = st.selectbox(
+                        "Employment Status",
+                        options=status_options,
+                        index=status_options.index(current_status),
+                        key="edit_attorney_employment_status_select",
+                    )
+
+                    submitted = st.form_submit_button(
+                        "Update Attorney"
+                    )
+
+                    if submitted:
+                        if not edit_name.strip() or not edit_email.strip():
+                            st.error(
+                                "Name and email are required."
+                            )
+                        else:
+                            attorney_data = {
+                                "name": edit_name.strip(),
+                                "email": edit_email.strip(),
+                                "date_of_birth": edit_date_of_birth,
+                                "title": edit_title.strip(),
+                                "office": edit_office.strip(),
+                                "practice_area": (
+                                    edit_practice_area.strip()
+                                ),
+                                "employment_status": (
+                                    edit_employment_status
+                                ),
+                            }
+
+                            try:
+                                updated = update_attorney(
+                                    selected_attorney_id,
+                                    attorney_data,
+                                )
+
+                                if updated:
+                                    refresh_callback()
+
+                                    st.session_state[
+                                        "edit_attorney_employment_status"
+                                    ] = edit_employment_status
+
+                                    st.success(
+                                        "Attorney updated successfully."
+                                    )
+                                else:
+                                    st.error(
+                                        "Attorney could not be updated "
+                                        "because the record no longer exists."
+                                    )
+
+                            except Exception as e:
+                                st.error(
+                                    f"Could not update attorney: {e}"
+                                )
 
     with st.expander("Add License"):
         with st.form("add_license_form"):

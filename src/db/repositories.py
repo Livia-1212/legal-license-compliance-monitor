@@ -236,6 +236,115 @@ def load_matter_directory_with_assignments() -> pd.DataFrame:
         conn.close()
 
 
+def search_attorneys(search_term: str, limit: int = 20) -> list[dict]:
+    """
+    Search attorneys by attorney ID, name, email, office, or practice area.
+
+    Results are limited so the Streamlit page does not load the entire
+    attorneys table into memory.
+    """
+    cleaned_term = search_term.strip()
+
+    if not cleaned_term:
+        return []
+
+    conn = get_connection()
+
+    try:
+        with conn.cursor() as cur:
+            pattern = f"%{cleaned_term}%"
+
+            cur.execute(
+                """
+                SELECT
+                    attorney_id,
+                    name,
+                    email,
+                    date_of_birth,
+                    title,
+                    office,
+                    practice_area,
+                    employment_status
+                FROM attorneys
+                WHERE
+                    CAST(attorney_id AS TEXT) ILIKE %s
+                    OR name ILIKE %s
+                    OR email ILIKE %s
+                    OR office ILIKE %s
+                    OR practice_area ILIKE %s
+                ORDER BY name, attorney_id
+                LIMIT %s;
+                """,
+                (
+                    pattern,
+                    pattern,
+                    pattern,
+                    pattern,
+                    pattern,
+                    limit,
+                ),
+            )
+
+            columns = [description[0] for description in cur.description]
+
+            return [
+                dict(zip(columns, row))
+                for row in cur.fetchall()
+            ]
+
+    finally:
+        conn.close()
+
+
+def update_attorney(attorney_id: int, attorney_data: dict) -> bool:
+    """
+    Update an existing attorney record.
+
+    Returns True when a matching attorney was updated.
+    Returns False when the attorney ID does not exist.
+    """
+    conn = get_connection()
+
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE attorneys
+                SET
+                    name = %s,
+                    email = %s,
+                    date_of_birth = %s,
+                    title = %s,
+                    office = %s,
+                    practice_area = %s,
+                    employment_status = %s
+                WHERE attorney_id = %s;
+                """,
+                (
+                    attorney_data["name"],
+                    attorney_data["email"],
+                    attorney_data["date_of_birth"],
+                    attorney_data["title"],
+                    attorney_data["office"],
+                    attorney_data["practice_area"],
+                    attorney_data["employment_status"],
+                    attorney_id,
+                ),
+            )
+
+            updated = cur.rowcount > 0
+
+        conn.commit()
+        return updated
+
+    except Exception:
+        conn.rollback()
+        raise
+
+    finally:
+        conn.close()
+
+
 def create_attorney(attorney_data: dict) -> None:
     """
     Insert a new attorney record into PostgreSQL.
